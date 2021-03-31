@@ -1,4 +1,4 @@
-public class Server {
+public class Server implements Comparable<Server>{
   String type, ID, state, curStartTime, core, mem, disk, wJobs, rJobs;
 
   public Server (String s) {
@@ -18,6 +18,17 @@ public class Server {
 
   public Server () {
 
+  }
+
+  @Override
+  public String toString () {
+    return type + " " + ID;
+  }
+
+  @Override
+  public int compareTo(Server arg0) {
+    // TODO Auto-generated method stub
+    return 0;
   }
 
 }
