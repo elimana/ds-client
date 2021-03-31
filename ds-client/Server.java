@@ -3,7 +3,7 @@ public class Server implements Comparable<Server>{
 
   public Server (String s) {
     String[] parsed = s.split(" ");
-    
+
     type = parsed[0];
     ID = parsed[1];
     state = parsed[2];
@@ -28,11 +28,11 @@ public class Server implements Comparable<Server>{
   @Override
   public int compareTo(Server other) {
     
-    if (Integer.parseInt(this.core) > Integer.parseInt(other.core)) {
+    if (Integer.parseInt(this.core) < Integer.parseInt(other.core)) {
        
        return 1;
        
-    } else if (Integer.parseInt(this.core) < Integer.parseInt(other.core)) {
+    } else if (Integer.parseInt(this.core) > Integer.parseInt(other.core)) {
        
        return -1;
        
