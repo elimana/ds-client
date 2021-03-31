@@ -26,9 +26,22 @@ public class Server implements Comparable<Server>{
   }
 
   @Override
-  public int compareTo(Server arg0) {
-    // TODO Auto-generated method stub
-    return 0;
+  public int compareTo(Server other) {
+    
+    if (Integer.parseInt(this.core) > Integer.parseInt(other.core)) {
+       
+       return 1;
+       
+    } else if (Integer.parseInt(this.core) < Integer.parseInt(other.core)) {
+       
+       return -1;
+       
+    } else {
+       
+       return 0;
+       
+    }
+       
   }
 
 }
