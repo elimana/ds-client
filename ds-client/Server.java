@@ -3,7 +3,7 @@ public class Server implements Comparable<Server>{
 
   public Server (String s) {
     String[] parsed = s.split(" ");
-    System.out.println(parsed);
+    
     type = parsed[0];
     ID = parsed[1];
     state = parsed[2];
