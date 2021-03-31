@@ -16,12 +16,13 @@ public class DSClient {
     try {
       dsclient.connect(50000);
 
-      List<Server> s = dsclient.getServers();
+      List<Server> servers = dsclient.getServers();
 
+      Server largestServer = dsclient.getLargestServer(servers);
 
       Job j = dsclient.getNextJob();
       while (j != null) {
-        dsclient.dispatch(j, s.get(4));
+        dsclient.dispatch(j, largestServer);
         j = dsclient.getNextJob();
       }
       
@@ -35,6 +36,12 @@ public class DSClient {
     }
     
     
+  }
+
+  public Server getLargestServer(List<Server> servers) {
+    Collections.sort(servers);
+
+    return servers.get(0);
   }
 
   public Socket connect(int port) throws UnknownHostException, IOException {
