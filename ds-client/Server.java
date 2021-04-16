@@ -1,16 +1,44 @@
 public class Server implements Comparable<Server>{
-  String type, ID, state, curStartTime, core, mem, disk, wJobs, rJobs;
+  private String type, state;
+  private int ID, curStartTime, core, mem, disk;
 
   public Server (String s) {
     String[] parsed = s.split(" ");
-
     type = parsed[0];
-    ID = parsed[1];
+    ID = Integer.parseInt(parsed[1]);
     state = parsed[2];
-    curStartTime = parsed[3];
-    core = parsed[4];
-    mem = parsed[5];
-    disk = parsed[6];
+    curStartTime = Integer.parseInt(parsed[3]);
+    core = Integer.parseInt(parsed[4]);
+    mem = Integer.parseInt(parsed[5]);
+    disk = Integer.parseInt(parsed[6]);
+  }
+
+  public String getType() {
+    return this.type;
+  }
+
+  public int getID() {
+    return this.ID;
+  }
+
+  public String getState() {
+    return this.state;
+  }
+
+  public int getCurStartTime() {
+    return this.curStartTime;
+  }
+
+  public int getCore() {
+    return this.core;
+  }
+
+  public int getMem() {
+    return this.mem;
+  }
+
+  public int getDisk() {
+    return this.disk;
   }
 
   @Override
@@ -20,12 +48,22 @@ public class Server implements Comparable<Server>{
 
   @Override
   public int compareTo(Server other) {
-    if (Integer.parseInt(this.core) < Integer.parseInt(other.core)) {
+    if (this.core < other.core) {
       return 1;
-    } else if (Integer.parseInt(this.core) > Integer.parseInt(other.core)) {
+    }
+    else if (this.core > other.core) {
       return -1;
-    } else {
+    }
+    else {
+      if(this.ID > other.ID) {
+        return 1;
+      }
+      if(this.ID < other.ID) {
+        return -1;
+      }
       return 0;
     }
   }
+
+
 }

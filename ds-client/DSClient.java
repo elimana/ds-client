@@ -179,7 +179,7 @@ public class DSClient {
     try {
       // Construct the 'SCHD' scheduling message to send to the ds-server with the job
       // ID and server type and ID information.
-      this.write("SCHD " + j.getID() + " " + s.type + " " + s.ID);
+      this.write("SCHD " + j.getID() + " " + s.getType() + " " + s.getID());
       this.read();
     } catch (IOException e) {
       e.printStackTrace();
