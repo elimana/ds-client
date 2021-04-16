@@ -12,13 +12,8 @@ public class Job {
     disk = parsed[6];
   }
 
-  public Job() {
-    
-  }
-
   @Override
   public String toString() {
-    // TODO Auto-generated method stub
     return "JOBN " + ID;
   }
 }

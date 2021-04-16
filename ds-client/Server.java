@@ -11,13 +11,6 @@ public class Server implements Comparable<Server>{
     core = parsed[4];
     mem = parsed[5];
     disk = parsed[6];
-    disk = parsed[7];
-    // wJobs = parsed[8];
-    // rJobs = parsed[9];
-  }
-
-  public Server () {
-
   }
 
   @Override
@@ -27,21 +20,12 @@ public class Server implements Comparable<Server>{
 
   @Override
   public int compareTo(Server other) {
-    
     if (Integer.parseInt(this.core) < Integer.parseInt(other.core)) {
-       
-       return 1;
-       
+      return 1;
     } else if (Integer.parseInt(this.core) > Integer.parseInt(other.core)) {
-       
-       return -1;
-       
+      return -1;
     } else {
-       
-       return 0;
-       
+      return 0;
     }
-       
   }
-
 }
