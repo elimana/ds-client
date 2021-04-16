@@ -1,0 +1,6 @@
+# Java class files
+*.class
+
+# Test logs
+*.log
+*.diff
