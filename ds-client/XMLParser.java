@@ -5,7 +5,7 @@ import javax.xml.parsers.*;
 import java.io.*;
 import java.util.*;
 
-public class xmlParser {
+public class XMLParser {
     public static void main(String[] args) { // For testing only
 
         ArrayList<Server> serverObjListTest = parseXML(getFilePath());
@@ -110,7 +110,7 @@ public class xmlParser {
 
     public static String getFilePath() {
 
-        String filepath = xmlparsertest.class.getProtectionDomain().getCodeSource().getLocation().getPath()
+        String filepath = XMLParser.class.getProtectionDomain().getCodeSource().getLocation().getPath()
                 + "ds-system.xml";
 
         // Account for possible space chars in filepath
