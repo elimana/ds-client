@@ -16,7 +16,7 @@ public class DSClient {
     try {
       // Connect to the ds-server instance running on the default port 50000 and
       // complete the handshake.
-      dsclient.connect(50000, "eli");
+      dsclient.connect(50000, "group9");
 
       // Get the first job for scheduling.
       Job j = dsclient.getNextJob();
@@ -179,7 +179,7 @@ public class DSClient {
     try {
       // Construct the 'SCHD' scheduling message to send to the ds-server with the job
       // ID and server type and ID information.
-      this.write("SCHD " + j.ID + " " + s.type + " " + s.ID);
+      this.write("SCHD " + j.getID() + " " + s.type + " " + s.ID);
       this.read();
     } catch (IOException e) {
       e.printStackTrace();
