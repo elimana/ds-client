@@ -6,130 +6,97 @@ import java.io.*;
 import java.util.*;
 
 public class XMLParser {
-    private Document xmlDocument;
-    public static void main(String[] args) { // For testing only
+  private Document xmlDocument;
 
-        XMLParser xmlParser = new XMLParser(XMLParser.getFilePath());
-        List<Server> serverObjListTest = xmlParser.getServers();
+  public static void main(String[] args) { // For testing only
+    XMLParser xmlParser = new XMLParser(XMLParser.getFilePath());
+    List<Server> serverObjListTest = xmlParser.getServers();
 
-        System.out.println("Output List:");
+    System.out.println("Output List:");
+    for (int i = 0; i < serverObjListTest.size(); i++) {
+      System.out.println(serverObjListTest.get(i).getType() + " " + serverObjListTest.get(i).getID() + " "
+              + serverObjListTest.get(i).getState() + " " + serverObjListTest.get(i).getCurStartTime() + " "
+              + serverObjListTest.get(i).getCore() + " " + serverObjListTest.get(i).getMem() + " "
+              + serverObjListTest.get(i).getDisk() + " " + serverObjListTest.get(i).getBootTime() + " "
+              + serverObjListTest.get(i).getHourlyRate());
+    }
+  }
 
-        for (int i = 0; i < serverObjListTest.size(); i++) {
+  public XMLParser(String filepath) {
+    try {
+      File inputFile = new File(filepath);
 
-            System.out.println(
+      DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
+      DocumentBuilder dBuilder = dbFactory.newDocumentBuilder();
 
-                    serverObjListTest.get(i).getType() + " " + serverObjListTest.get(i).getID() + " "
-                            + serverObjListTest.get(i).getState() + " " + serverObjListTest.get(i).getCurStartTime()
-                            + " " + serverObjListTest.get(i).getCore() + " " + serverObjListTest.get(i).getMem() + " "
-                            + serverObjListTest.get(i).getDisk() + " " + serverObjListTest.get(i).getBootTime() + " "
-                            + serverObjListTest.get(i).getHourlyRate()
+      xmlDocument = dBuilder.parse(inputFile);
+      xmlDocument.getDocumentElement().normalize();
+    } catch (Exception e) {
+      e.printStackTrace();
+    }
+  }
 
-            );
-
-        }
-
+  public List<Server> getServers() {
+    // Returned List of Extracted Server Objects
+    List<Server> serverObjList = new ArrayList<Server>();
+    if (xmlDocument == null) {
+      return serverObjList;
     }
 
-    public XMLParser(String filepath) {
-        try {
-            File inputFile = new File(filepath);
+    NodeList serverNodeList = this.xmlDocument.getElementsByTagName("server");
+    for (int temp = 0; temp < serverNodeList.getLength(); temp++) {
+      Node serverNode = serverNodeList.item(temp);
+      if (serverNode.getNodeType() == Node.ELEMENT_NODE) {
+        Element serverElement = (Element) serverNode;
+        
+        int numServers = Integer.parseInt(serverElement.getAttribute("limit"));
+        for (int tempy = 0; tempy < numServers; tempy++) {
+          String serverObjInitString = "";
 
-            DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
-            DocumentBuilder dBuilder = dbFactory.newDocumentBuilder();
+          // 0) Server Type
+          serverObjInitString += (serverElement.getAttribute("type") + " ");
+          // 1) Server ID
+          serverObjInitString += (Integer.toString(tempy) + " ");
+          // 2) Server State
+          serverObjInitString += ("Unknown" + " ");
+          // 3) Cur Start Time
+          serverObjInitString += ("-1" + " ");
+          // 4) Core Count
+          serverObjInitString += (serverElement.getAttribute("coreCount") + " ");
+          // 5 Memory
+          serverObjInitString += (serverElement.getAttribute("memory") + " ");
+          // 6 Disk
+          serverObjInitString += (serverElement.getAttribute("disk") + " ");
+          // 7 Boot Time
+          serverObjInitString += (serverElement.getAttribute("bootupTime") + " ");
+          // 8 Hourly Rate
+          serverObjInitString += serverElement.getAttribute("hourlyRate");
 
-            xmlDocument = dBuilder.parse(inputFile);
-            xmlDocument.getDocumentElement().normalize();
-        } catch (Exception e) {
-            e.printStackTrace();
+          System.out.println("String is: " + serverObjInitString);
+
+          Server serverObj = new Server(serverObjInitString);
+          serverObjList.add(serverObj);
         }
+      }
     }
 
-    public List<Server> getServers() {
-        // Returned List of Extracted Server Objects
-        List<Server> serverObjList = new ArrayList<Server>();
-        if (xmlDocument == null) {
-            return serverObjList;
-        }
+    return serverObjList;
+  }
 
-        NodeList serverNodeList = this.xmlDocument.getElementsByTagName("server");
+  public static String getFilePath() {
+    String filepath = XMLParser.class.getProtectionDomain().getCodeSource().getLocation().getPath() + "ds-system.xml";
 
-        for (int temp = 0; temp < serverNodeList.getLength(); temp++) {
+    // Account for possible space chars in filepath
+    filepath = filepath.replaceAll("%20", " ");
+    System.out.println("Filepath is: " + filepath);
 
-            Node serverNode = serverNodeList.item(temp);
-
-            if (serverNode.getNodeType() == Node.ELEMENT_NODE) {
-
-                Element serverElement = (Element) serverNode;
-
-                int numServers = Integer.parseInt(serverElement.getAttribute("limit"));
-
-                for (int tempy = 0; tempy < numServers; tempy++) {
-
-                    String serverObjInitString = "";
-
-                    // 0) Server Type
-                    serverObjInitString += (serverElement.getAttribute("type") + " ");
-
-                    // 1) Server ID
-                    serverObjInitString += (Integer.toString(tempy) + " ");
-
-                    // 2) Server State
-                    serverObjInitString += ("Unknown" + " ");
-
-                    // 3) Cur Start Time
-                    serverObjInitString += ("-1" + " ");
-
-                    // 4) Core Count
-                    serverObjInitString += (serverElement.getAttribute("coreCount") + " ");
-
-                    // 5 Memory
-                    serverObjInitString += (serverElement.getAttribute("memory") + " ");
-
-                    // 6 Disk
-                    serverObjInitString += (serverElement.getAttribute("disk") + " ");
-
-                    // 7 Boot Time
-                    serverObjInitString += (serverElement.getAttribute("bootupTime") + " ");
-
-                    // 8 Hourly Rate
-                    serverObjInitString += serverElement.getAttribute("hourlyRate");
-
-                    System.out.println("String is: " + serverObjInitString);
-
-                    Server serverObj = new Server(serverObjInitString);
-                    serverObjList.add(serverObj);
-
-                }
-
-            }
-
-        }
-
-        return serverObjList;
-
+    // Check to see whether ds-system.xml file exists in local directory
+    File checkDir = new File(filepath);
+    if (checkDir.exists() == false) {
+      System.out.println("ds-system.xml file not found in local directory");
+      System.exit(1);
     }
 
-    public static String getFilePath() {
-
-        String filepath = XMLParser.class.getProtectionDomain().getCodeSource().getLocation().getPath()
-                + "ds-system.xml";
-
-        // Account for possible space chars in filepath
-        filepath = filepath.replaceAll("%20", " ");
-
-        System.out.println("Filepath is: " + filepath);
-
-        // Check to see whether ds-system.xml file exists in local directory
-        File checkDir = new File(filepath);
-        if (checkDir.exists() == false) {
-
-            System.out.println("ds-system.xml file not found in local directory");
-            System.exit(1);
-
-        }
-
-        return filepath;
-
-    }
-
+    return filepath;
+  }
 }
