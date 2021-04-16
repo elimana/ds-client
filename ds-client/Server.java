@@ -46,6 +46,13 @@ public class Server implements Comparable<Server>{
     return type + " " + ID;
   }
 
+  /**
+   * First priority to sort cores descending.
+   * Second priority to sort ID ascending.
+   * 
+   * @param other server to compare to
+   * @return int
+   */
   @Override
   public int compareTo(Server other) {
     if (this.core < other.core) {
