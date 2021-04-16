@@ -6,9 +6,11 @@ import java.io.*;
 import java.util.*;
 
 public class XMLParser {
+    private Document xmlDocument;
     public static void main(String[] args) { // For testing only
 
-        ArrayList<Server> serverObjListTest = parseXML(getFilePath());
+        XMLParser xmlParser = new XMLParser(XMLParser.getFilePath());
+        List<Server> serverObjListTest = xmlParser.getServers();
 
         System.out.println("Output List:");
 
@@ -28,79 +30,78 @@ public class XMLParser {
 
     }
 
-    public static ArrayList<Server> parseXML(String filepath) {
-
-        // Returned List of Extracted Server Objects
-        ArrayList<Server> serverObjList = new ArrayList<Server>();
-
+    public XMLParser(String filepath) {
         try {
-
             File inputFile = new File(filepath);
 
             DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
             DocumentBuilder dBuilder = dbFactory.newDocumentBuilder();
 
-            Document doc = dBuilder.parse(inputFile);
-            doc.getDocumentElement().normalize();
+            xmlDocument = dBuilder.parse(inputFile);
+            xmlDocument.getDocumentElement().normalize();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
 
-            NodeList serverNodeList = doc.getElementsByTagName("server");
+    public List<Server> getServers() {
+        // Returned List of Extracted Server Objects
+        List<Server> serverObjList = new ArrayList<Server>();
+        if (xmlDocument == null) {
+            return serverObjList;
+        }
 
-            for (int temp = 0; temp < serverNodeList.getLength(); temp++) {
+        NodeList serverNodeList = this.xmlDocument.getElementsByTagName("server");
 
-                Node serverNode = serverNodeList.item(temp);
+        for (int temp = 0; temp < serverNodeList.getLength(); temp++) {
 
-                if (serverNode.getNodeType() == Node.ELEMENT_NODE) {
+            Node serverNode = serverNodeList.item(temp);
 
-                    Element serverElement = (Element) serverNode;
+            if (serverNode.getNodeType() == Node.ELEMENT_NODE) {
 
-                    int numServers = Integer.parseInt(serverElement.getAttribute("limit"));
+                Element serverElement = (Element) serverNode;
 
-                    for (int tempy = 0; tempy < numServers; tempy++) {
+                int numServers = Integer.parseInt(serverElement.getAttribute("limit"));
 
-                        String serverObjInitString = "";
+                for (int tempy = 0; tempy < numServers; tempy++) {
 
-                        // 0) Server Type
-                        serverObjInitString += (serverElement.getAttribute("type") + " ");
+                    String serverObjInitString = "";
 
-                        // 1) Server ID
-                        serverObjInitString += (Integer.toString(tempy) + " ");
+                    // 0) Server Type
+                    serverObjInitString += (serverElement.getAttribute("type") + " ");
 
-                        // 2) Server State
-                        serverObjInitString += ("Unknown" + " ");
+                    // 1) Server ID
+                    serverObjInitString += (Integer.toString(tempy) + " ");
 
-                        // 3) Cur Start Time
-                        serverObjInitString += ("-1" + " ");
+                    // 2) Server State
+                    serverObjInitString += ("Unknown" + " ");
 
-                        // 4) Core Count
-                        serverObjInitString += (serverElement.getAttribute("coreCount") + " ");
+                    // 3) Cur Start Time
+                    serverObjInitString += ("-1" + " ");
 
-                        // 5 Memory
-                        serverObjInitString += (serverElement.getAttribute("memory") + " ");
+                    // 4) Core Count
+                    serverObjInitString += (serverElement.getAttribute("coreCount") + " ");
 
-                        // 6 Disk
-                        serverObjInitString += (serverElement.getAttribute("disk") + " ");
+                    // 5 Memory
+                    serverObjInitString += (serverElement.getAttribute("memory") + " ");
 
-                        // 7 Boot Time
-                        serverObjInitString += (serverElement.getAttribute("bootupTime") + " ");
+                    // 6 Disk
+                    serverObjInitString += (serverElement.getAttribute("disk") + " ");
 
-                        // 8 Hourly Rate
-                        serverObjInitString += serverElement.getAttribute("hourlyRate");
+                    // 7 Boot Time
+                    serverObjInitString += (serverElement.getAttribute("bootupTime") + " ");
 
-                        System.out.println("String is: " + serverObjInitString);
+                    // 8 Hourly Rate
+                    serverObjInitString += serverElement.getAttribute("hourlyRate");
 
-                        Server serverObj = new Server(serverObjInitString);
-                        serverObjList.add(serverObj);
+                    System.out.println("String is: " + serverObjInitString);
 
-                    }
+                    Server serverObj = new Server(serverObjInitString);
+                    serverObjList.add(serverObj);
 
                 }
 
             }
-
-        } catch (Exception e) {
-
-            e.printStackTrace();
-            System.exit(-1);
 
         }
 
