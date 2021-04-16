@@ -1,17 +1,20 @@
-//Parses ds-system.xml file and returns arraylist of server objects
-
 import org.w3c.dom.*;
 import javax.xml.parsers.*;
 import java.io.*;
 import java.util.*;
 
+/**
+ * Parses the ds-system.xml file and generates a list of Server objects
+ */
 public class XMLParser {
   private Document xmlDocument;
 
-  public static void main(String[] args) { // For testing only
+  public static void main(String[] args) {
+    // Test of parsing ds-system.xml and getting the server list
     XMLParser xmlParser = new XMLParser(XMLParser.getFilePath());
     List<Server> serverObjListTest = xmlParser.getServers();
 
+    // Print the server list
     System.out.println("Output List:");
     for (int i = 0; i < serverObjListTest.size(); i++) {
       System.out.println(serverObjListTest.get(i).getType() + " " + serverObjListTest.get(i).getID() + " "
@@ -24,6 +27,7 @@ public class XMLParser {
 
   public XMLParser(String filepath) {
     try {
+      // Load the ds-system.xml file and parse it as an xml Document object
       File inputFile = new File(filepath);
 
       DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
@@ -36,27 +40,37 @@ public class XMLParser {
     }
   }
 
+  /**
+   * Gets the list of Servers from the ds-system.xml file as a List of Server
+   * objects.
+   * 
+   * @return a List of Server objects from the ds-system.xml file
+   */
   public List<Server> getServers() {
-    // Returned List of Extracted Server Objects
     List<Server> serverObjList = new ArrayList<Server>();
+
+    // If no xml document is loaded, return an empty list
     if (xmlDocument == null) {
       return serverObjList;
     }
 
+    // Get the elements under the 'server' tag in the ds-system.xml file
     NodeList serverNodeList = this.xmlDocument.getElementsByTagName("server");
-    for (int temp = 0; temp < serverNodeList.getLength(); temp++) {
-      Node serverNode = serverNodeList.item(temp);
+    for (int i = 0; i < serverNodeList.getLength(); i++) {
+      Node serverNode = serverNodeList.item(i);
       if (serverNode.getNodeType() == Node.ELEMENT_NODE) {
         Element serverElement = (Element) serverNode;
         
+        // For each server of a type (specified by the 'limit' attribute) generate a
+        // Server object with its unique ID and add it to the List
         int numServers = Integer.parseInt(serverElement.getAttribute("limit"));
-        for (int tempy = 0; tempy < numServers; tempy++) {
+        for (int ID = 0; ID < numServers; ID++) {
           String serverObjInitString = "";
 
           // 0) Server Type
           serverObjInitString += (serverElement.getAttribute("type") + " ");
           // 1) Server ID
-          serverObjInitString += (Integer.toString(tempy) + " ");
+          serverObjInitString += (Integer.toString(ID) + " ");
           // 2) Server State
           serverObjInitString += ("Unknown" + " ");
           // 3) Cur Start Time
@@ -72,8 +86,6 @@ public class XMLParser {
           // 8 Hourly Rate
           serverObjInitString += serverElement.getAttribute("hourlyRate");
 
-          System.out.println("String is: " + serverObjInitString);
-
           Server serverObj = new Server(serverObjInitString);
           serverObjList.add(serverObj);
         }
@@ -83,18 +95,22 @@ public class XMLParser {
     return serverObjList;
   }
 
+  /**
+   * Gets the file path of the ds-system.xml file in the same directory as the
+   * program.
+   * 
+   * @return the file path of ds-system.xml
+   */
   public static String getFilePath() {
     String filepath = XMLParser.class.getProtectionDomain().getCodeSource().getLocation().getPath() + "ds-system.xml";
 
     // Account for possible space chars in filepath
     filepath = filepath.replaceAll("%20", " ");
-    System.out.println("Filepath is: " + filepath);
 
     // Check to see whether ds-system.xml file exists in local directory
     File checkDir = new File(filepath);
     if (checkDir.exists() == false) {
-      System.out.println("ds-system.xml file not found in local directory");
-      System.exit(1);
+      System.err.println("ds-system.xml file not found in local directory");
     }
 
     return filepath;
