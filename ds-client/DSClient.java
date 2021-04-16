@@ -2,27 +2,34 @@ import java.io.*;
 import java.net.*;
 import java.util.*;
 
+/**
+ * The client side implementation for the client-server model distributed system
+ * simulator ds-sim (https://github.com/distsys-MQ/ds-sim). This implementation
+ * uses the AllToLargest algorithm for job scheduling where all jobs are
+ * dispatched to the largest server.
+ */
 public class DSClient {
-
   Socket client;
 
   public DSClient () {
   }
 
   public static void main(String[] args) {
-     
     DSClient dsclient = new DSClient();
 
     try {
       // Connect to the ds-server instance running on the default port 50000 and
       // complete the handshake.
-      dsclient.connect(50000, "group9");
+      dsclient.connect(50000, System.getProperty("user.name"));
 
       // Get the first job for scheduling.
       Job j = dsclient.getNextJob();
 
+      // Parse the ds-system.xml file
+      XMLParser xmlParser = new XMLParser(XMLParser.getFilePath());
+
       // Get the list of available servers and store the largest server.
-      List<Server> servers = dsclient.getServers();
+      List<Server> servers = xmlParser.getServers();
       Server largestServer = dsclient.getLargestServer(servers);
 
       // While there are jobs to schedule, get them and dispatch them all to the
