@@ -16,26 +16,22 @@ public class DSClient {
     try {
       dsclient.connect(50000);
 
-      List<Server> servers = dsclient.getServers();
+      Job j = dsclient.getNextJob();
 
+      List<Server> servers = dsclient.getServers();
       Server largestServer = dsclient.getLargestServer(servers);
 
-      Job j = dsclient.getNextJob();
       while (j != null) {
         dsclient.dispatch(j, largestServer);
         j = dsclient.getNextJob();
       }
       
-
+      dsclient.disconnect();
     } catch (UnknownHostException e) {
-      // TODO Auto-generated catch block
       e.printStackTrace();
     } catch (IOException e) {
-      // TODO Auto-generated catch block
       e.printStackTrace();
     }
-    
-    
   }
 
   public Server getLargestServer(List<Server> servers) {
@@ -50,15 +46,11 @@ public class DSClient {
     // Handshake
     this.write("HELO");
       
-    System.out.println(this.readLine());
+    this.read();
 
     this.write("AUTH eli");
     
-    System.out.println(this.readLine());
-
-    this.write("REDY");
-
-    this.readLine();
+    this.read();
 
     return client;
   }
@@ -69,24 +61,23 @@ public class DSClient {
     try {
       this.write("GETS All");
 
-      String data[] = this.readLine().split(" ");
+      String resp = this.read();
+
+      String data[] = resp.split(" ");
 
       int lines = Integer.parseInt(data[1]);
       this.write("OK");
 
       for (int i = 0; i < lines; i++) {
-        // System.out.println(this.read(32));
-        Server s = new Server(this.readLine());
-        System.out.println(s);
+        Server s = new Server(this.read());
         servers.add(s);
       }
 
       this.write("OK");
 
-      this.readLine();
+      this.read();
 
     } catch (IOException e) {
-      // TODO Auto-generated catch block
       e.printStackTrace();
     }
 
@@ -99,14 +90,23 @@ public class DSClient {
     try {
       this.write("REDY");
 
-      String reply = this.readLine();
-      if (reply.equals("NONE")) {
-        this.disconnect();
-        return j;
-      } else if (!reply.split(" ")[0].equals("JOBN")) {
-        return this.getNextJob();
+      String resp = this.read();
+      String type = resp.split(" ")[0];
+
+      while (type.equals("JCPL") || type.equals("RESF") || type.equals("RESR")) {
+        this.write("REDY");
+        resp = this.read();
+        type = resp.split(" ")[0];
+      }
+
+      if (type.equals("JOBN") || type.equals("JOBP")) {
+        j = new Job(resp);
+      } else if (resp.equals("NONE")) {
+        return null;
       } else {
-        j = new Job(reply);
+        System.err.println("Unexpected response from server to 'REDY': '" + resp + "'.");
+        // unexpected error
+        return null;
       }
     } catch (IOException e) {
       e.printStackTrace();
@@ -117,11 +117,9 @@ public class DSClient {
 
   public void dispatch(Job j, Server s) {
     try {
-      System.out.println("SCHD " + j.ID + " " + s.type + " " + s.ID);
       this.write("SCHD " + j.ID + " " + s.type + " " + s.ID);
-      System.out.println(this.readLine());
+      this.read();
     } catch (IOException e) {
-      // TODO Auto-generated catch block
       e.printStackTrace();
     }
   }
@@ -130,27 +128,15 @@ public class DSClient {
     if (client != null) {
       try {
         this.write("QUIT");
-        System.out.println(this.readLine());
+        this.read();
         client.close();
       } catch (IOException e) {
-        // TODO Auto-generated catch block
         e.printStackTrace();
       }
     }
   }
-  
+
   public String read() throws IOException {
-    return read(32);
-  }
-
-  public String read(int len) throws IOException {
-    byte[] b = new byte[len];
-    InputStream in = client.getInputStream();
-    in.read(b);
-    return new String(b);
-  }
-
-  public String readLine() throws IOException {
     DataInputStream in = new DataInputStream(client.getInputStream());
     return in.readLine();
   }
