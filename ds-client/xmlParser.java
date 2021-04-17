@@ -63,7 +63,7 @@ public class xmlParser {
                         serverObjInitString += (serverElement.getAttribute("type") + " ");
 
                         // 1) Server ID
-                        serverObjInitString += (Integer.toString(tempy + 1) + " ");
+                        serverObjInitString += (Integer.toString(tempy) + " ");
 
                         // 2) Server State
                         serverObjInitString += ("Unknown" + " ");
