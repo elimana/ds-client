@@ -1,6 +1,7 @@
 public class Server implements Comparable<Server>{
   private String type, state;
-  private int ID, curStartTime, core, mem, disk;
+  private int ID, curStartTime, core, mem, disk, bootTime;
+  private float hourlyRate;
 
   public Server (String s) {
     String[] parsed = s.split(" ");
@@ -11,6 +12,8 @@ public class Server implements Comparable<Server>{
     core = Integer.parseInt(parsed[4]);
     mem = Integer.parseInt(parsed[5]);
     disk = Integer.parseInt(parsed[6]);
+    bootTime = Integer.parseInt(parsed[7]);
+    hourlyRate = Float.parseFloat(parsed[8]);
   }
 
   public String getType() {
@@ -39,6 +42,14 @@ public class Server implements Comparable<Server>{
 
   public int getDisk() {
     return this.disk;
+  }
+
+  public int getBootTime() {
+    return this.bootTime;
+  }
+
+  public float getHourlyRate() {
+    return this.hourlyRate;
   }
 
   @Override
