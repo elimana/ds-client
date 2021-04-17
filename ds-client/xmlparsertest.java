@@ -1,5 +1,4 @@
-//WIP - Currently working locally, a few issues to correct with sort function and interface with server class
-//I should be able to resolve on 17/04
+//Parses ds-system.xml file and returns arraylist of server objects
 
 import org.w3c.dom.*;
 import javax.xml.parsers.*;
@@ -7,12 +6,30 @@ import java.io.*;
 import java.util.*;
 
 public class xmlparsertest {
+    public static void main(String[] args) { //For testing only
 
-    public static void main(String[] args) {
-
-        System.out.println("Output List:");
-        System.out.println(parseXML(getFilePath()));
+        ArrayList<Server> serverObjListTest = parseXML(getFilePath());
         
+        System.out.println("Output List:");
+
+        for(int i = 0; i < serverObjListTest.size(); i++) {
+
+            System.out.println(
+
+                  serverObjListTest.get(i).getType() + " " 
+                + serverObjListTest.get(i).getID() + " " 
+                + serverObjListTest.get(i).getState() + " "
+                + serverObjListTest.get(i).getCurStartTime() + " "
+                + serverObjListTest.get(i).getCore() + " "
+                + serverObjListTest.get(i).getMem() + " "
+                + serverObjListTest.get(i).getDisk() + " "
+                + serverObjListTest.get(i).getBootTime() + " " 
+                + serverObjListTest.get(i).getHourlyRate()
+            
+            );
+
+        }
+    
     }
     
     public static ArrayList<Server> parseXML (String filepath) {
@@ -30,8 +47,6 @@ public class xmlparsertest {
             Document doc = dBuilder.parse(inputFile);
             doc.getDocumentElement().normalize();
 
-            System.out.println("Root element :" + doc.getDocumentElement().getNodeName());
-
             NodeList serverNodeList = doc.getElementsByTagName("server");
            
             for (int temp = 0; temp < serverNodeList.getLength(); temp++) {
@@ -41,9 +56,6 @@ public class xmlparsertest {
                 if (serverNode.getNodeType() == Node.ELEMENT_NODE) {
                
                     Element serverElement = (Element) serverNode;
-
-                    System.out.println("No. " + (temp+1));
-                    System.out.println("Number of servers of this type: " + serverElement.getAttribute("limit"));
 
                     int numServers = Integer.parseInt(serverElement.getAttribute("limit"));
 
@@ -89,8 +101,6 @@ public class xmlparsertest {
 
             }
 
-           // System.out.println(serverObjList);
-        
         } catch (Exception e) {
 
                 e.printStackTrace();
@@ -105,16 +115,23 @@ public class xmlparsertest {
     public static String getFilePath() {
 
         String filepath = xmlparsertest.class.getProtectionDomain().getCodeSource().getLocation().getPath() + "ds-system.xml";
-        System.out.println("Filepath is: " + filepath); //Account for spaces in filepath name
+        
+        //Account for possible space chars in filepath 
+        filepath = filepath.replaceAll("%20", " ");
+
+        System.out.println("Filepath is: " + filepath); 
+
+        //Check to see whether ds-system.xml file exists in local directory
+        File checkDir = new File(filepath);
+        if(checkDir.exists()==false) {
+
+            System.out.println("ds-system.xml file not found in local directory");
+            System.exit(1);
+
+        }
+
         return filepath;
 
     }
-
-    public static ArrayList<Server> sortByNumCores (ArrayList<Server> unsorted) {
-
-        //TBC
-
-    }
-
 
 }
