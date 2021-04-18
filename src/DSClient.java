@@ -9,7 +9,7 @@ import java.util.*;
  * dispatched to the largest server.
  */
 public class DSClient {
-  Socket client;
+  Socket DSServer;
 
   public DSClient () {
   }
@@ -40,7 +40,7 @@ public class DSClient {
       }
       
       // When there are no more jobs to schedule or an unexpected error occurs,
-      // disconnect safely fro the ds-server.
+      // disconnect safely from the ds-server.
       dsclient.disconnect();
     } catch (UnknownHostException e) {
       e.printStackTrace();
@@ -82,7 +82,7 @@ public class DSClient {
    */
   public Socket connect(int port, String user) throws UnknownHostException, IOException {
     // Connect to the ds-server instance.
-    this.client = new Socket("localhost", port);
+    this.DSServer = new Socket("localhost", port);
 
     // Complete the handshake.
     this.write("HELO");
@@ -90,7 +90,7 @@ public class DSClient {
     this.write("AUTH " + user);
     this.read();
 
-    return client;
+    return DSServer;
   }
 
   /**
@@ -199,12 +199,12 @@ public class DSClient {
   public void disconnect() {
     // If there is a Socket connection to ds-server, send the 'QUIT' command to
     // disconnect safely.
-    if (client != null) {
+    if (DSServer != null) {
       try {
         this.write("QUIT");
         this.read();
         // After quitting, close the Socket connection.
-        client.close();
+        DSServer.close();
       } catch (IOException e) {
         e.printStackTrace();
       }
@@ -220,7 +220,7 @@ public class DSClient {
    */
   public String read() throws IOException {
     // Retrieve the Data input stream of the Socket connection to ds-server.
-    DataInputStream in = new DataInputStream(client.getInputStream());
+    DataInputStream in = new DataInputStream(DSServer.getInputStream());
     // Use the readLine method to read a line of text sent by ds-server.
     return in.readLine();
   }
@@ -239,7 +239,7 @@ public class DSClient {
     // ds-server running with the '-n' parameter.
     message = message + "\n";
     // Convert the message String to bytes and send the message to ds-server.
-    client.getOutputStream().write(message.getBytes());
-    client.getOutputStream().flush();
+    DSServer.getOutputStream().write(message.getBytes());
+    DSServer.getOutputStream().flush();
   }
 }

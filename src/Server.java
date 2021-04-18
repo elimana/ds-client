@@ -82,6 +82,4 @@ public class Server implements Comparable<Server>{
       return 0;
     }
   }
-
-
 }
