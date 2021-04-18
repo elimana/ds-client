@@ -94,10 +94,11 @@ public class XMLParser {
   }
 
   /**
-   * Gets the file path of the ds-system.xml file in the same directory as the
-   * program.
+   * Gets the relative filepath of ds-system.xml, 
+   * in the same directory as DSClient. Also checks to see
+   * whether ds-system.xml exists.
    * 
-   * @return the file path of ds-system.xml
+   * @return the file path of ds-system.xml or "unavailable"
    */
   public static String getFilePath() {
     String filepath = XMLParser.class.getProtectionDomain().getCodeSource().getLocation().getPath() + "ds-system.xml";
@@ -108,7 +109,7 @@ public class XMLParser {
     // Check to see whether ds-system.xml file exists in local directory
     File checkDir = new File(filepath);
     if (checkDir.exists() == false) {
-      System.err.println("ds-system.xml file not found in local directory");
+      filepath = "unavailable";
     }
 
     return filepath;

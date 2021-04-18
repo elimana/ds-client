@@ -1,12 +1,19 @@
 import java.io.*;
 import java.net.*;
 import java.util.*;
+import java.time.*;
 
 /**
  * The client side implementation for the client-server model distributed system
  * simulator ds-sim (https://github.com/distsys-MQ/ds-sim). This implementation
  * uses the AllToLargest algorithm for job scheduling where all jobs are
  * dispatched to the largest server.
+ * 
+ * Arguments:
+ * 
+ * "-g" -> Force client to use GETS All method to retrieve server list. Client
+ * defaults to parsing ds-system.xml for server list if omitted. Client will
+ * always use GETS All method if ds-system.xml not found.
  */
 public class DSClient {
   Socket client;
@@ -15,9 +22,14 @@ public class DSClient {
   }
 
   public static void main(String[] args) {
+
     DSClient dsclient = new DSClient();
 
     try {
+
+      // Setup simple log file in client local directory
+      dsclient.startLog(args);
+
       // Connect to the ds-server instance running on the default port 50000 and
       // complete the handshake.
       dsclient.connect(50000, System.getProperty("user.name"));
@@ -25,11 +37,12 @@ public class DSClient {
       // Get the first job for scheduling.
       Job j = dsclient.getNextJob();
 
-      // Parse the ds-system.xml file
-      XMLParser xmlParser = new XMLParser(XMLParser.getFilePath());
+      // Decides whether to make GETS All request to ds-server
+      // Or parse ds-system.xml
+      // Returns list of servers
+      List<Server> servers = dsclient.decideGetServers(args);
 
-      // Get the list of available servers and store the largest server.
-      List<Server> servers = xmlParser.getServers();
+      // Store the largest server
       Server largestServer = dsclient.getLargestServer(servers);
 
       // While there are jobs to schedule, get them and dispatch them all to the
@@ -40,7 +53,7 @@ public class DSClient {
       }
       
       // When there are no more jobs to schedule or an unexpected error occurs,
-      // disconnect safely fro the ds-server.
+      // disconnect safely from the ds-server.
       dsclient.disconnect();
     } catch (UnknownHostException e) {
       e.printStackTrace();
@@ -94,12 +107,80 @@ public class DSClient {
   }
 
   /**
+   * Decides whether to make GETS All request to ds-server, or parse ds-system.xml
+   * 
+   * Checks to see whether -g flag has been set at runtime. Checks to see whether
+   * ds-system.xml exists in the client's local directory.
+   * 
+   * If -g flag has been set or ds-system.xml could not be found, makes GETS All
+   * request to ds-server.
+   * 
+   * Otherwise, calls XMLParser to process ds-system.xml
+   * 
+   * @param args Array of arguments in string format, passed to DSClient.main at
+   *             runtime
+   * @return List of servers
+   * 
+   */
+  public List<Server> decideGetServers(String[] args) {
+
+    String filepath = null; // Filepath to ds-system.xml
+    List<Server> servers = null; // Server list to be returned when populated
+    Boolean useGetsAll = false; // Flag set according to detection of -g argument
+
+    // Check args passed at runtime to see whether -g flag is active
+    for (int i = 0; i < args.length; i++) {
+
+      if (args[i].equals("-g")) {
+
+        // Force client to use GETS All method to obtain list of servers
+        useGetsAll = true;
+
+      }
+
+    }
+
+    if (useGetsAll == true) {
+
+      // Call own method to retrieve server list by GETS All request sent to ds-server
+      servers = this.getServers();
+
+    } else {
+
+      filepath = XMLParser.getFilePath();
+
+      // Check to see if ds-system.xml exists at expected path
+      if (filepath == "unavailable") {
+
+        // If it's unavailable, report & default to "GETS All" request to ds-server
+        System.err.println("ds-system.xml file not found in local directory");
+        servers = this.getServers();
+
+      } else {
+
+        // If it's available, use XMLParser to return list of servers
+        System.err.println("Using XMLParser");
+        XMLParser xmlParser = new XMLParser(filepath);
+        servers = xmlParser.getServers();
+
+      }
+
+    }
+
+    return servers;
+
+  }
+
+  /**
    * Retrieves the list of Servers available on ds-server using the 'GETS All'
    * command.
    * 
    * @return a List of Server objects available on ds-server.
    */
   public List<Server> getServers() {
+
+    System.err.println("Using GETS All mode");
+
     // Create a list of Server objects
     List<Server> servers = new ArrayList<Server>();
 
@@ -242,4 +323,48 @@ public class DSClient {
     client.getOutputStream().write(message.getBytes());
     client.getOutputStream().flush();
   }
+
+  /**
+   * Redirects system.err to a text file in client directory, for simple logging.
+   * Prints header with session timestamp to log file.
+   * 
+   * @param String[] containing command line arguments passed to DSClient.main at
+   *                 runtime
+   * @throws IOException
+   */
+  public void startLog(String[] args) throws IOException {
+
+    // Redirect system.err to log file in client local directory
+    System.setErr(new PrintStream("log.txt"));
+
+    // Capture local time from Epoch
+    Instant current = Instant.now();
+    // Parse into local time object
+    LocalDateTime ldt = LocalDateTime.ofInstant(current, ZoneId.systemDefault());
+
+    // Print local timestamp for current session
+    System.err.println("Start session time:");
+    System.err.printf("%s %d %d at %dh %dm%n", ldt.getMonth(), ldt.getDayOfMonth(), ldt.getYear(), ldt.getHour(),
+        ldt.getMinute());
+
+    // Print session arguments
+    if (args.length == 0) {
+
+      System.err.println("No args");
+
+    } else {
+
+      for (int i = 0; i < args.length; i++) {
+
+        System.err.println("arg " + Integer.toString(i) + ": " + args[i]);
+
+      }
+
+    }
+
+    // End header
+    System.err.println("------");
+
+  }
+
 }
