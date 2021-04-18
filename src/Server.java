@@ -57,6 +57,24 @@ public class Server implements Comparable<Server>{
     return type + " " + ID;
   }
 
+  public String getAllServerDetails() {
+
+    String serverDetails = "";
+
+    serverDetails += (this.type + " ");
+    serverDetails += (Integer.toString(this.ID) + " ");
+    serverDetails += (this.state + " ");
+    serverDetails += (Integer.toString(this.curStartTime) + " ");
+    serverDetails += (Integer.toString(this.core) + " ");
+    serverDetails += (Integer.toString(this.mem) + " ");
+    serverDetails += (Integer.toString(this.disk) + " ");
+    serverDetails += (Integer.toString(this.bootTime) + " ");
+    serverDetails += Float.toString(this.hourlyRate);
+
+    return serverDetails;
+
+  }
+
   /**
    * First priority to sort cores descending.
    * Second priority to sort ID ascending.

@@ -17,11 +17,9 @@ public class XMLParser {
     // Print the server list
     System.out.println("Output List:");
     for (int i = 0; i < serverObjListTest.size(); i++) {
-      System.out.println(serverObjListTest.get(i).getType() + " " + serverObjListTest.get(i).getID() + " "
-              + serverObjListTest.get(i).getState() + " " + serverObjListTest.get(i).getCurStartTime() + " "
-              + serverObjListTest.get(i).getCore() + " " + serverObjListTest.get(i).getMem() + " "
-              + serverObjListTest.get(i).getDisk() + " " + serverObjListTest.get(i).getBootTime() + " "
-              + serverObjListTest.get(i).getHourlyRate());
+
+      System.out.println(serverObjListTest.get(i).getAllServerDetails());
+
     }
   }
 
