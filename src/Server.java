@@ -3,7 +3,7 @@
  */
 public class Server implements Comparable<Server>{
   private String type, state;
-  private int ID, curStartTime, core, mem, disk, bootTime;
+  private int ID, curStartTime, core, mem, disk, bootTime, wJobs, rJobs;
   private float hourlyRate;
 
   /**
@@ -25,6 +25,19 @@ public class Server implements Comparable<Server>{
     hourlyRate = Float.parseFloat(parsed[8]);
   }
 
+  public Server (String type, int ID, String state, int curStartTime, int core, int mem, int disk, int bootTime, float hourlyRate) {
+    this.type = type;
+    this.state = state;
+    this.ID = ID;
+    this.curStartTime = curStartTime;
+    this.core = core;
+    this.mem = mem;
+    this.disk = disk;
+    this.bootTime = bootTime;
+    this.wJobs = 0;
+    this.rJobs = 0;
+    this.hourlyRate = hourlyRate;
+  }
   /**
    * Getter function for server type
    * 
