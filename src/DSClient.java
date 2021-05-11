@@ -40,15 +40,15 @@ public class DSClient {
       // Decides whether to make GETS All request to ds-server
       // Or parse ds-system.xml
       // Returns list of servers
-      List<Server> servers = dsclient.decideGetServers(args);
-
-      // Store the largest server
-      Server largestServer = dsclient.getLargestServer(servers);
+      //List<Server> servers = dsclient.decideGetServers(args);
 
       // While there are jobs to schedule, get them and dispatch them all to the
       // largest server.
       while (j != null) {
-        dsclient.dispatch(j, largestServer);
+        // Get a list of servers capable of running this job
+        List<Server> capableServers = dsclient.getCapableServers(j.getCore(), j.getMemory(), j.getDisk());
+        // Schedule to the first capable server
+        dsclient.dispatch(j, capableServers.get(0));
         j = dsclient.getNextJob();
       }
       
@@ -187,6 +187,43 @@ public class DSClient {
     try {
       // Send 'GETS All' to the ds-server and retrieve the list of servers.
       this.write("GETS All");
+
+      String resp = this.read();
+      String data[] = resp.split(" ");
+      int lines = Integer.parseInt(data[1]);
+
+      this.write("OK");
+
+      // Create a new Server object for each retrieved server and add it to the List.
+      for (int i = 0; i < lines; i++) {
+        Server s = new Server(this.read());
+        servers.add(s);
+      }
+
+      // Complete the communication with ds-server.
+      this.write("OK");
+      this.read();
+    } catch (IOException e) {
+      e.printStackTrace();
+    }
+
+    return servers;
+  }
+
+  /**
+   * Retrieves the list of capable Servers available on ds-server using the 'GETS
+   * Capable' command.
+   * 
+   * @return a List of Server objects available on ds-server.
+   */
+  public List<Server> getCapableServers(int core, int mem, int disk) {
+
+    // Create a list of Server objects
+    List<Server> servers = new ArrayList<Server>();
+
+    try {
+      // Send 'GETS All' to the ds-server and retrieve the list of servers.
+      this.write("GETS Capable " + core + " " + mem + " " + disk);
 
       String resp = this.read();
       String data[] = resp.split(" ");
