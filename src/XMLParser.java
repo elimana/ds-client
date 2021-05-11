@@ -63,28 +63,25 @@ public class XMLParser {
         // Server object with its unique ID and add it to the List
         int numServers = Integer.parseInt(serverElement.getAttribute("limit"));
         for (int ID = 0; ID < numServers; ID++) {
-          String serverObjInitString = "";
 
-          // 0) Server Type
-          serverObjInitString += (serverElement.getAttribute("type") + " ");
-          // 1) Server ID
-          serverObjInitString += (Integer.toString(ID) + " ");
+          // 1) Server Type
+          String type = serverElement.getAttribute("type");
           // 2) Server State
-          serverObjInitString += ("Unknown" + " ");
+          String state = "Unknown";
           // 3) Cur Start Time
-          serverObjInitString += ("-1" + " ");
+          int curStartTime = -1;
           // 4) Core Count
-          serverObjInitString += (serverElement.getAttribute("coreCount") + " ");
+          int core = Integer.parseInt(serverElement.getAttribute("coreCount"));
           // 5 Memory
-          serverObjInitString += (serverElement.getAttribute("memory") + " ");
+          int mem = Integer.parseInt(serverElement.getAttribute("memory"));
           // 6 Disk
-          serverObjInitString += (serverElement.getAttribute("disk") + " ");
+          int disk = Integer.parseInt(serverElement.getAttribute("disk"));
           // 7 Boot Time
-          serverObjInitString += (serverElement.getAttribute("bootupTime") + " ");
+          int bootTime = Integer.parseInt(serverElement.getAttribute("bootupTime"));
           // 8 Hourly Rate
-          serverObjInitString += serverElement.getAttribute("hourlyRate");
+          float hourlyRate = Float.parseFloat(serverElement.getAttribute("hourlyRate"));
 
-          Server serverObj = new Server(serverObjInitString);
+          Server serverObj = new Server(type, ID, state, curStartTime, core, mem, disk, bootTime, hourlyRate);
           serverObjList.add(serverObj);
         }
       }
