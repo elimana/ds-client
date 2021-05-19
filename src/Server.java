@@ -1,3 +1,5 @@
+import java.util.*;
+
 /**
  * Constructs and provides interfaces for the server object
  */
@@ -5,6 +7,7 @@ public class Server implements Comparable<Server>{
   private String type, state;
   private int ID, curStartTime, core, mem, disk, bootTime, wJobs, rJobs;
   private float hourlyRate;
+  private List<Job> serverJobs;
 
   /**
    * Constructs a server object from a string
@@ -119,6 +122,24 @@ public class Server implements Comparable<Server>{
     return this.hourlyRate;
   }
 
+  public int getWJobs() {
+    return this.wJobs;
+  }
+
+  public int getRJobs() {
+    return this.rJobs;
+  }
+
+
+
+  public List<Job> getServerJobs() {
+    return this.serverJobs;
+  }
+
+  public void setServerJobs(List<Job> serverJobs) {
+    this.serverJobs = serverJobs;
+  }
+
   /**
    * Function for displaying server ID and type together, in a friendly format.
    * Useful for testing.
@@ -155,7 +176,7 @@ public class Server implements Comparable<Server>{
   }
 
   /**
-   * First priority to sort cores descending. Second priority to sort ID
+   * First priority to sort cores ascending. Second priority to sort ID
    * ascending.
    * 
    * @param other server object to compare against
@@ -163,10 +184,10 @@ public class Server implements Comparable<Server>{
    */
   @Override
   public int compareTo(Server other) {
-    if (this.core < other.core) {
+    if (this.core > other.core) {
       return 1;
     }
-    else if (this.core > other.core) {
+    else if (this.core < other.core) {
       return -1;
     }
     else {
