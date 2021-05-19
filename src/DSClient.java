@@ -16,6 +16,8 @@ import java.time.*;
  * always use GETS All method if ds-system.xml not found.
  */
 public class DSClient {
+  private final static int PORT = 50000;
+  private final static String IP_ADDRESS = "localhost";
   Socket DSServer;
 
   public DSClient () {
@@ -32,23 +34,17 @@ public class DSClient {
 
       // Connect to the ds-server instance running on the default port 50000 and
       // complete the handshake.
-      dsclient.connect(50000, System.getProperty("user.name"));
+      dsclient.connect(PORT, System.getProperty("user.name"));
 
       // Get the first job for scheduling.
       Job j = dsclient.getNextJob();
 
-      // Decides whether to make GETS All request to ds-server
-      // Or parse ds-system.xml
-      // Returns list of servers
-      //List<Server> servers = dsclient.decideGetServers(args);
-
-      // While there are jobs to schedule, get them and dispatch them all to the
-      // largest server.
       while (j != null) {
-        // Get a list of servers capable of running this job
-        List<Server> capableServers = dsclient.getCapableServers(j.getCore(), j.getMemory(), j.getDisk());
-        // Schedule to the first capable server
-        dsclient.dispatch(j, capableServers.get(0));
+        // Get the best fit server for the job
+        Server bestFitServer = dsclient.BestFitServer(j);
+
+        // Schedule to the best fit server
+        dsclient.dispatch(j, bestFitServer);
         j = dsclient.getNextJob();
       }
       
@@ -84,6 +80,69 @@ public class DSClient {
     return servers.get(0);
   }
 
+  public Server BestFitServer(Job j) {
+    List<Server> capableServers = getCapableServers(j.getCore(), j.getMemory(), j.getDisk());
+    Collections.sort(capableServers);
+
+    int minFitness = Integer.MAX_VALUE;
+    Server BFServer = null;
+    for (Server s : capableServers) {
+      if (s.getState().equals("booting") || s.getWJobs() == 0) {
+        int fitness = getServerFitness(s);
+        if (fitness >= j.getCore() && fitness < minFitness) {
+          minFitness = fitness;
+          BFServer = s;
+        }
+      }
+    }
+
+    if (BFServer == null) {
+      // get next available server
+      BFServer = capableServers.get(0);
+    }
+    return BFServer;
+  }
+
+  public int getServerFitness(Server s) {
+
+    List<Job> serverJobs = new ArrayList<Job>();
+
+
+    try {
+      // Send 'LSTJ' to the ds-server and retrieve the list of jobs scheduled to the server.
+      this.write("LSTJ " + s.getType() + " " + s.getID());
+
+      String resp = this.read();
+      //String data[] = resp.split(" ");
+      //int lines = Integer.parseInt(data[1]);
+
+      this.write("OK");
+
+      // Create a new Job object for each retrieved job and add it to the List.
+      
+      String jobString = this.read();
+      while (!jobString.equals(".")) {
+        Job j = new Job(jobString);
+        serverJobs.add(j);
+
+        // Complete the communication with ds-server.
+        this.write("OK");
+        jobString = this.read();
+      }
+
+    } catch (IOException e) {
+      e.printStackTrace();
+    }
+
+    int fitness = s.getCore();
+    for (Job job : serverJobs) {
+      if (job.getState() == 2 || s.getState().equals("booting"))
+        fitness -= job.getCore();
+    }
+
+    return Math.max(fitness, 0);
+  }
+
   /**
    * Connects to a ds-server instance and completes the authentication handshake.
    * 
@@ -95,7 +154,7 @@ public class DSClient {
    */
   public Socket connect(int port, String user) throws UnknownHostException, IOException {
     // Connect to the ds-server instance.
-    this.DSServer = new Socket("localhost", port);
+    this.DSServer = new Socket(IP_ADDRESS, port);
 
     // Complete the handshake.
     this.write("HELO");
