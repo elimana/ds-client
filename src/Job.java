@@ -2,7 +2,7 @@
  * Constructs and provides interfaces for the job object
  */
 public class Job {
-  private int ID, submitTime, estRuntime, core, memory, disk;
+  private int ID, state, submitTime, startTime, estRuntime, core, memory, disk;
 
   /**
    * Constructs a job object from string
@@ -12,12 +12,28 @@ public class Job {
    */
   public Job(String s) {
     String[] parsed = s.split(" ");
-    submitTime = Integer.parseInt(parsed[1]);
-    ID = Integer.parseInt(parsed[2]);
-    estRuntime = Integer.parseInt(parsed[3]);
-    core = Integer.parseInt(parsed[4]);
-    memory = Integer.parseInt(parsed[5]);
-    disk = Integer.parseInt(parsed[6]);
+
+    if (parsed[0].equals("JOBN")) {
+      submitTime = Integer.parseInt(parsed[1]);
+      ID = Integer.parseInt(parsed[2]);
+      estRuntime = Integer.parseInt(parsed[3]);
+      core = Integer.parseInt(parsed[4]);
+      memory = Integer.parseInt(parsed[5]);
+      disk = Integer.parseInt(parsed[6]);
+
+      state = 0;
+      startTime = -1;
+    } else {
+      ID = Integer.parseInt(parsed[0]);
+      state = Integer.parseInt(parsed[1]);
+      startTime = Integer.parseInt(parsed[2]);
+      estRuntime = Integer.parseInt(parsed[3]);
+      core = Integer.parseInt(parsed[4]);
+      memory = Integer.parseInt(parsed[5]);
+      disk = Integer.parseInt(parsed[6]);
+
+      submitTime = -1;
+    }
   }
 
   /**
@@ -46,6 +62,14 @@ public class Job {
    */
   public int getID() {
     return this.ID;
+  }
+
+  public int getState() {
+    return this.state;
+  }
+
+  public int getStartTime() {
+    return this.startTime;
   }
 
   /**
