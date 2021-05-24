@@ -43,7 +43,7 @@ public class Job {
    */
   @Override
   public String toString() {
-    return "JOBN " + ID;
+    return "JOBN " + ID + ": cores=" + core + " endtime=" +getEndTime();
   }
 
   /**
@@ -68,8 +68,16 @@ public class Job {
     return this.state;
   }
 
+  public void setState(int state) {
+    this.state = state;
+  }
+
   public int getStartTime() {
     return this.startTime;
+  }
+
+  public void setStartTime(int startTime) {
+    this.startTime = startTime;
   }
 
   /**
@@ -107,4 +115,10 @@ public class Job {
   public int getDisk() {
     return this.disk;
   }
+
+  public int getEndTime() {
+    if (startTime == -1) return -1;
+
+    return startTime + estRuntime;
+  }  
 }

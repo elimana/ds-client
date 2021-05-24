@@ -24,8 +24,8 @@ public class Server implements Comparable<Server>{
     core = Integer.parseInt(parsed[4]);
     mem = Integer.parseInt(parsed[5]);
     disk = Integer.parseInt(parsed[6]);
-    bootTime = Integer.parseInt(parsed[7]);
-    hourlyRate = Float.parseFloat(parsed[8]);
+    wJobs = Integer.parseInt(parsed[7]);
+    rJobs = Integer.parseInt(parsed[8]);
   }
 
   public Server (String type, int ID, String state, int curStartTime, int core, int mem, int disk, int bootTime, float hourlyRate) {
@@ -41,6 +41,7 @@ public class Server implements Comparable<Server>{
     this.rJobs = 0;
     this.hourlyRate = hourlyRate;
   }
+
   /**
    * Getter function for server type
    * 

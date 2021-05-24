@@ -1,6 +1,7 @@
 import java.io.*;
 import java.net.*;
 import java.util.*;
+import java.util.stream.Collectors;
 import java.time.*;
 
 /**
@@ -18,6 +19,7 @@ import java.time.*;
 public class DSClient {
   private final static int PORT = 50000;
   private final static String IP_ADDRESS = "localhost";
+
   Socket DSServer;
 
   public DSClient () {
@@ -28,7 +30,6 @@ public class DSClient {
     DSClient dsclient = new DSClient();
 
     try {
-
       // Setup simple log file in client local directory
       dsclient.startLog(args);
 
@@ -82,16 +83,24 @@ public class DSClient {
 
   public Server BestFitServer(Job j) {
     List<Server> capableServers = getCapableServers(j.getCore(), j.getMemory(), j.getDisk());
-    Collections.sort(capableServers);
+    // Collections.sort(capableServers);
 
-    int minFitness = Integer.MAX_VALUE;
+    float minFitness = Float.MAX_VALUE;
+    // int minFitness = Integer.MAX_VALUE;
     Server BFServer = null;
     for (Server s : capableServers) {
       if (s.getState().equals("booting") || s.getWJobs() == 0) {
-        int fitness = getServerFitness(s);
-        if (fitness >= j.getCore() && fitness < minFitness) {
-          minFitness = fitness;
-          BFServer = s;
+        Resource fitness = calcServerUtilisation(s);
+        if (fitness.getPendingJobs() == 0 && fitness.getAvailableMem() >= j.getMemory()
+            && fitness.getAvailableDisk() >= j.getDisk() && fitness.getAvailableCores() >= j.getCore()) {
+          
+          float statistic = ((float)fitness.getAvailableCores()/(float)j.getCore()) + ((float)fitness.getAvailableMem()/(float)j.getMemory()) + ((float)fitness.getAvailableDisk()/(float)j.getDisk());
+          if (statistic < minFitness) {
+            minFitness = statistic;
+          // if (fitness.getAvailableCores() < minFitness) {
+          //   minFitness = fitness.getAvailableCores();
+            BFServer = s;
+          }
         }
       }
     }
@@ -103,10 +112,8 @@ public class DSClient {
     return BFServer;
   }
 
-  public int getServerFitness(Server s) {
-
+  public List<Job> getServerJobs(Server s) {
     List<Job> serverJobs = new ArrayList<Job>();
-
 
     try {
       // Send 'LSTJ' to the ds-server and retrieve the list of jobs scheduled to the server.
@@ -119,7 +126,6 @@ public class DSClient {
       this.write("OK");
 
       // Create a new Job object for each retrieved job and add it to the List.
-      
       String jobString = this.read();
       while (!jobString.equals(".")) {
         Job j = new Job(jobString);
@@ -134,13 +140,27 @@ public class DSClient {
       e.printStackTrace();
     }
 
-    int fitness = s.getCore();
-    for (Job job : serverJobs) {
-      if (job.getState() == 2 || s.getState().equals("booting"))
-        fitness -= job.getCore();
+    return serverJobs;
+  }
+
+  public Resource calcServerUtilisation(Server s) {
+    int availableCores = s.getCore();
+    int availableMem = s.getMem();
+    int availableDisk = s.getDisk();
+    int pendingJobs = s.getWJobs();
+
+    if (s.getState().equals("booting") && pendingJobs > 0) {
+      List<Job> serverJobs = getServerJobs(s);
+      for (Job job : serverJobs) {
+        if (job.getState() == 1 && job.getStartTime() != -1) {
+          pendingJobs--;
+        }
+      }
     }
 
-    return Math.max(fitness, 0);
+    Resource serverUtilisation = new Resource(availableCores, availableMem, availableDisk, pendingJobs);
+
+    return serverUtilisation;
   }
 
   /**
