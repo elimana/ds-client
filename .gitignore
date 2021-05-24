@@ -5,3 +5,7 @@
 *.log
 *.diff
 log.txt
+
+# Generated simulation files
+compiled/ds-jobs.xml
+compiled/ds-system.xml
