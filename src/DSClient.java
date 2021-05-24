@@ -107,9 +107,39 @@ public class DSClient {
 
     if (BFServer == null) {
       // get next available server
-      BFServer = capableServers.get(0);
+      BFServer = getNextAvailableServer(capableServers, j.getCore(), j.getMemory(), j.getDisk());
     }
     return BFServer;
+  }
+
+  public Server getNextAvailableServer(List<Server> capableServers, int reqCore, int reqMem, int reqDisk) {
+    int minTime = Integer.MAX_VALUE;
+    Server nextServer = capableServers.get(0);
+    for (Server s : capableServers) {
+      int availableTime = getServerEstWaitTime(s);
+      if (availableTime < minTime) {
+        nextServer = s;
+        minTime = availableTime;
+      }
+    }
+
+    return nextServer;
+  }
+
+  public int getServerEstWaitTime(Server s) {
+    int estWaitTime = 0;
+    try {
+      // Send 'LSTJ' to the ds-server and retrieve the list of jobs scheduled to the server.
+      this.write("EJWT " + s.getType() + " " + s.getID());
+
+      String resp = this.read();
+
+      estWaitTime = Integer.parseInt(resp);
+    } catch (IOException e) {
+      e.printStackTrace();
+    }
+
+    return estWaitTime;
   }
 
   public List<Job> getServerJobs(Server s) {
