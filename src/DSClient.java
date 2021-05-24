@@ -116,7 +116,8 @@ public class DSClient {
     int minTime = Integer.MAX_VALUE;
     Server nextServer = capableServers.get(0);
     for (Server s : capableServers) {
-      int availableTime = getServerEstWaitTime(s);
+      // int availableTime = getServerEstWaitTime(s);
+      int availableTime = getServerAvailableTime(s, reqCore, reqMem, reqDisk);
       if (availableTime < minTime) {
         nextServer = s;
         minTime = availableTime;
@@ -140,6 +141,64 @@ public class DSClient {
     }
 
     return estWaitTime;
+  }
+
+  public int getServerAvailableTime(Server s, int reqCore, int reqMem, int reqDisk) {
+    List<Job> serverJobs = getServerJobs(s);
+
+    List<Job> runningJobs;
+    List<Job> waitingJobs;
+
+    if (s.getState().equals("booting")) {
+      runningJobs = serverJobs.stream().filter(j -> j.getStartTime() >= 0).collect(Collectors.toList());
+      waitingJobs = serverJobs.stream().filter(j -> j.getStartTime() == -1).collect(Collectors.toList());
+    } else {
+      runningJobs = serverJobs.stream().filter(j -> j.getState() == 2).collect(Collectors.toList());
+      waitingJobs = serverJobs.stream().filter(j -> j.getState() == 1).collect(Collectors.toList());
+    }
+
+    runningJobs.sort((j1, j2) -> Integer.valueOf(j1.getEndTime()).compareTo(j2.getEndTime()));
+    waitingJobs.sort((j1, j2) -> Integer.valueOf(j1.getID()).compareTo(j2.getID()));
+
+    Resource utilisedResources = calcServerUtilisation(s);
+
+    int availableCores = utilisedResources.getAvailableCores();
+    int availableMem = utilisedResources.getAvailableMem();
+    int availableDisk = utilisedResources.getAvailableDisk();
+    int time = 0;
+
+    while (!waitingJobs.isEmpty() || (availableCores < reqCore || availableMem < reqMem || availableDisk < reqDisk)) {
+      // Remove the first job to finish from the list of running jobs and update
+      // available resources
+      Job finishedJob = runningJobs.remove(0);
+      time = finishedJob.getEndTime();
+      availableCores += finishedJob.getCore();
+      availableMem += finishedJob.getMemory();
+      availableDisk += finishedJob.getDisk();
+
+      // Add waiting jobs
+      boolean addRunJob = false;
+      while (!waitingJobs.isEmpty() && waitingJobs.get(0).getCore() <= availableCores
+          && waitingJobs.get(0).getMemory() <= availableMem && waitingJobs.get(0).getDisk() <= availableDisk) {
+        Job nextJob = waitingJobs.remove(0);
+
+        nextJob.setState(2);
+        nextJob.setStartTime(time);
+
+        runningJobs.add(nextJob);
+        addRunJob = true;
+
+        availableCores -= nextJob.getCore();
+        availableMem -= nextJob.getMemory();
+        availableDisk -= nextJob.getDisk();
+      }
+
+      if (addRunJob) {
+        runningJobs.sort((j1, j2) -> Integer.valueOf(j1.getEndTime()).compareTo(j2.getEndTime()));
+      }
+    }
+
+    return time;
   }
 
   public List<Job> getServerJobs(Server s) {
