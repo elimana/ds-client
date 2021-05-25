@@ -20,6 +20,7 @@ public class DSClient {
   private final static int PORT = 50000;
   private final static String IP_ADDRESS = "localhost";
 
+  HashMap<String, Server> serverTypes;
   Socket DSServer;
 
   public DSClient () {
@@ -40,9 +41,17 @@ public class DSClient {
       // Get the first job for scheduling.
       Job j = dsclient.getNextJob();
 
+      List<Server> servers = dsclient.decideGetServers(args);
+
+      dsclient.serverTypes = new HashMap<String, Server>();
+
+      for (Server server : servers) {
+        dsclient.serverTypes.putIfAbsent(server.getType(), server);
+      }
+
       while (j != null) {
         // Get the best fit server for the job
-        Server bestFitServer = dsclient.BestFitServer(j);
+        Server bestFitServer = dsclient.bestFitServer(j);
 
         // Schedule to the best fit server
         dsclient.dispatch(j, bestFitServer);
@@ -81,7 +90,7 @@ public class DSClient {
     return servers.get(0);
   }
 
-  public Server BestFitServer(Job j) {
+  public Server bestFitServer(Job j) {
     List<Server> capableServers = getCapableServers(j.getCore(), j.getMemory(), j.getDisk());
     // Collections.sort(capableServers);
 
@@ -207,11 +216,7 @@ public class DSClient {
     try {
       // Send 'LSTJ' to the ds-server and retrieve the list of jobs scheduled to the server.
       this.write("LSTJ " + s.getType() + " " + s.getID());
-
-      String resp = this.read();
-      //String data[] = resp.split(" ");
-      //int lines = Integer.parseInt(data[1]);
-
+      this.read();
       this.write("OK");
 
       // Create a new Job object for each retrieved job and add it to the List.
@@ -230,6 +235,25 @@ public class DSClient {
     }
 
     return serverJobs;
+  }
+
+  public void terminateServer(Server s) {
+    try {
+      // Send 'TERM' to the ds-server and terminate the server.
+      this.write("TERM " + s.getType() + " " + s.getID());
+      this.read();
+
+    } catch (IOException e) {
+      e.printStackTrace();
+    }
+  }
+
+  public void terminateIdleServers(List<Server> servers) {
+    for (Server s : servers) {
+      if (s.getState().equals("idle")) {
+        terminateServer(s);
+      }
+    }
   }
 
   public Resource calcServerUtilisation(Server s) {
@@ -415,6 +439,37 @@ public class DSClient {
     return servers;
   }
 
+  public List<Server> getServerType(String serverType) {
+
+    // Create a list of Server objects
+    List<Server> servers = new ArrayList<Server>();
+
+    try {
+      // Send 'GETS All' to the ds-server and retrieve the list of servers.
+      this.write("GETS Type " + serverType);
+
+      String resp = this.read();
+      String data[] = resp.split(" ");
+      int lines = Integer.parseInt(data[1]);
+
+      this.write("OK");
+
+      // Create a new Server object for each retrieved server and add it to the List.
+      for (int i = 0; i < lines; i++) {
+        Server s = new Server(this.read());
+        servers.add(s);
+      }
+
+      // Complete the communication with ds-server.
+      this.write("OK");
+      this.read();
+    } catch (IOException e) {
+      e.printStackTrace();
+    }
+
+    return servers;
+  }
+
   /**
    * Sends 'REDY' to the server until the server sends a job to schedule (denoted
    * by either 'JOBN' or 'JOBP') and parses the server response into a Job object.
@@ -436,10 +491,20 @@ public class DSClient {
 
       // If the response is a job/server status message, continue sending 'REDY' until
       // no more status messages are received.
+      boolean jobsCompleted = false;
       while (type.equals("JCPL") || type.equals("RESF") || type.equals("RESR")) {
+        if (type.equals("JCPL")) {
+          jobsCompleted = true;
+          //String serverType = resp.split(" ")[3];
+          //terminateIdleServers(getServerType(serverType));
+        }
         this.write("REDY");
         resp = this.read();
         type = resp.split(" ")[0];
+      }
+
+      if (jobsCompleted) {
+        terminateIdleServers(getServers());
       }
 
       // If a job is received create a new Job object for it.
@@ -504,6 +569,7 @@ public class DSClient {
    * @return a String containing the line of text sent by ds-server
    * @throws IOException
    */
+  @SuppressWarnings("deprecation")
   public String read() throws IOException {
     // Retrieve the Data input stream of the Socket connection to ds-server.
     DataInputStream in = new DataInputStream(DSServer.getInputStream());
