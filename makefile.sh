@@ -1,2 +1,2 @@
-javac src/DSClient.java src/Server.java src/Job.java src/XMLParser.java -d compiled/
-echo "Created java class files"
+javac src/*.java -d compiled/
+echo "Created java class files in 'compiled/'."
