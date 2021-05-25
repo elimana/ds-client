@@ -90,6 +90,35 @@ public class DSClient {
     return servers.get(0);
   }
 
+  public Server cheapestServer(Job j) {
+    // If no Servers are provided, return null.
+    List<Server> capableServers = getCapableServers(j.getCore(), j.getMemory(), j.getDisk());
+
+    if (capableServers == null || capableServers.isEmpty()) {
+      return null;
+    }
+
+    Server cheapestServer = null;
+    Float minRelativeCost = Float.MAX_VALUE;
+    int minWJobs = Integer.MAX_VALUE;
+    for (Server server : capableServers) {
+      Server serverType = serverTypes.get(server.getType());
+      Float relativeCost = (float) serverType.getHourlyRate() / serverType.getCore();
+      if (relativeCost < minRelativeCost) {
+        minRelativeCost = relativeCost;
+        cheapestServer = server;
+        minWJobs = server.getWJobs();
+      } else if (relativeCost.equals(minRelativeCost) && server.getWJobs() < minWJobs) {
+        minRelativeCost = relativeCost;
+        cheapestServer = server;
+        minWJobs = server.getWJobs();
+      }
+    }
+
+    // Return the largest Server object from the list.
+    return cheapestServer;
+  }
+
   public Server bestFitServer(Job j) {
     List<Server> capableServers = getCapableServers(j.getCore(), j.getMemory(), j.getDisk());
     // Collections.sort(capableServers);
