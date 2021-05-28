@@ -12,9 +12,16 @@ import java.time.*;
  * 
  * Arguments:
  * 
- * "-g" -> Force client to use GETS All method to retrieve server list. Client
+ * "-g | --getsall" -> Force client to use GETS All method to retrieve server list. Client
  * defaults to parsing ds-system.xml for server list if omitted. Client will
  * always use GETS All method if ds-system.xml not found.
+ * 
+ * "-c | --cost"
+ * 
+ * "-e | --est"
+ * "-t | --termidle"
+ * "-b | --boot"
+ * "-f | --fitcore"
  */
 public class DSClient {
   private final static int PORT = 50000;
@@ -22,6 +29,8 @@ public class DSClient {
 
   HashMap<String, Server> serverTypes;
   Socket DSServer;
+  boolean useEstWaitTime = false, useCheapestServer = false, terminateAllIdleServers = false, useXMLParser = true,
+      bootingAsAvailable = false, fitnessByCore = false;;
 
   public DSClient () {
   }
@@ -31,6 +40,9 @@ public class DSClient {
     DSClient dsclient = new DSClient();
 
     try {
+      // Configure the client and scheduling algorithm
+      dsclient.configureClient(args);
+
       // Setup simple log file in client local directory
       dsclient.startLog(args);
 
@@ -41,7 +53,7 @@ public class DSClient {
       // Get the first job for scheduling.
       Job j = dsclient.getNextJob();
 
-      List<Server> servers = dsclient.decideGetServers(args);
+      List<Server> servers = dsclient.decideGetServers();
 
       dsclient.serverTypes = new HashMap<String, Server>();
 
@@ -51,7 +63,12 @@ public class DSClient {
 
       while (j != null) {
         // Get the best fit server for the job
-        Server bestFitServer = dsclient.bestFitServer(j);
+        Server bestFitServer;
+        if (dsclient.useCheapestServer) {
+          bestFitServer = dsclient.cheapestServer(j);
+        } else {
+          bestFitServer = dsclient.bestFitServer(j);
+        }
 
         // Schedule to the best fit server
         dsclient.dispatch(j, bestFitServer);
@@ -65,6 +82,43 @@ public class DSClient {
       e.printStackTrace();
     } catch (IOException e) {
       e.printStackTrace();
+    }
+  }
+
+  public void configureClient(String[] args) {
+    int i = 0;
+    while (i < args.length) {
+      if (args[i].equals("-g") || args[i].equals("--getsall")) {
+        useXMLParser = false;
+      } else if (args[i].equals("-c") || args[i].equals("--cost")) {
+        useCheapestServer = true;
+      } else if (args[i].equals("-t") || args[i].equals("-termidle")) {
+        terminateAllIdleServers = true;
+      } else if (args[i].equals("-e") || args[i].equals("--est")) {
+        useEstWaitTime = true;
+      } else if (args[i].equals("-b") || args[i].equals("--boot")) {
+        bootingAsAvailable = true;
+      } else if (args[i].equals("-f") || args[i].equals("--fitcore")) {
+        fitnessByCore = true;
+      } else if (args[i].equals("--help")) {
+        System.out.println("Usage: DSClient [-g | --getsall] [-c | --cost] [-e | --est] [-t | --termidle] [-b | --boot] [-f | --fitcore]");
+        System.exit(0);
+      } else {
+        System.err.println("Invalid argument: " + args[i]);
+        System.err.println("Usage: DSClient [-g | --getsall] [-c | --cost] [-e | --est] [-t | --termidle] [-b | --boot] [-f | --fitcore]");
+        System.exit(1);
+      }
+      i++;
+    }
+
+    // Check to see if ds-system.xml exists at expected path if using XMLParser
+    if (useXMLParser) {
+      String filepath = XMLParser.getFilePath();
+      if (filepath == "unavailable") {
+        // If it's unavailable, report & default to "GETS All" request to ds-server
+        System.err.println("ds-system.xml file not found in local directory");
+        useXMLParser = false;
+      }
     }
   }
 
@@ -121,22 +175,26 @@ public class DSClient {
 
   public Server bestFitServer(Job j) {
     List<Server> capableServers = getCapableServers(j.getCore(), j.getMemory(), j.getDisk());
-    // Collections.sort(capableServers);
 
     float minFitness = Float.MAX_VALUE;
-    // int minFitness = Integer.MAX_VALUE;
     Server BFServer = null;
     for (Server s : capableServers) {
-      if (s.getState().equals("booting") || s.getWJobs() == 0) {
+      if ((bootingAsAvailable && s.getState().equals("booting")) || s.getWJobs() == 0) {
         Resource fitness = calcServerUtilisation(s);
         if (fitness.getPendingJobs() == 0 && fitness.getAvailableMem() >= j.getMemory()
             && fitness.getAvailableDisk() >= j.getDisk() && fitness.getAvailableCores() >= j.getCore()) {
           
-          float statistic = ((float)fitness.getAvailableCores()/(float)j.getCore()) + ((float)fitness.getAvailableMem()/(float)j.getMemory()) + ((float)fitness.getAvailableDisk()/(float)j.getDisk());
+          float statistic;
+          if (fitnessByCore) {
+            statistic = fitness.getAvailableCores();
+          } else {
+            statistic = ((float) fitness.getAvailableCores() / (float) j.getCore())
+                + ((float) fitness.getAvailableMem() / (float) j.getMemory())
+                + ((float) fitness.getAvailableDisk() / (float) j.getDisk());
+          }
+
           if (statistic < minFitness) {
             minFitness = statistic;
-          // if (fitness.getAvailableCores() < minFitness) {
-          //   minFitness = fitness.getAvailableCores();
             BFServer = s;
           }
         }
@@ -154,8 +212,12 @@ public class DSClient {
     int minTime = Integer.MAX_VALUE;
     Server nextServer = capableServers.get(0);
     for (Server s : capableServers) {
-      // int availableTime = getServerEstWaitTime(s);
-      int availableTime = getServerAvailableTime(s, reqCore, reqMem, reqDisk);
+      int availableTime;
+      if (useEstWaitTime) {
+        availableTime = getServerEstWaitTime(s);
+      } else {
+        availableTime = getServerAvailableTime(s, reqCore, reqMem, reqDisk);
+      }
       if (availableTime < minTime) {
         nextServer = s;
         minTime = availableTime;
@@ -343,53 +405,23 @@ public class DSClient {
    * @return List of servers
    * 
    */
-  public List<Server> decideGetServers(String[] args) {
-
+  public List<Server> decideGetServers() {
     String filepath = null; // Filepath to ds-system.xml
     List<Server> servers = null; // Server list to be returned when populated
-    Boolean useGetsAll = false; // Flag set according to detection of -g argument
 
-    // Check args passed at runtime to see whether -g flag is active
-    for (int i = 0; i < args.length; i++) {
-
-      if (args[i].equals("-g")) {
-
-        // Force client to use GETS All method to obtain list of servers
-        useGetsAll = true;
-
-      }
-
-    }
-
-    if (useGetsAll == true) {
-
+    if (!useXMLParser) {
       // Call own method to retrieve server list by GETS All request sent to ds-server
       servers = this.getServers();
-
     } else {
-
+      // Get the filepath of ds-system.xml
       filepath = XMLParser.getFilePath();
 
-      // Check to see if ds-system.xml exists at expected path
-      if (filepath == "unavailable") {
-
-        // If it's unavailable, report & default to "GETS All" request to ds-server
-        System.err.println("ds-system.xml file not found in local directory");
-        servers = this.getServers();
-
-      } else {
-
-        // If it's available, use XMLParser to return list of servers
-        System.err.println("Using XMLParser");
-        XMLParser xmlParser = new XMLParser(filepath);
-        servers = xmlParser.getServers();
-
-      }
-
+      // Use XMLParser to return list of servers
+      XMLParser xmlParser = new XMLParser(filepath);
+      servers = xmlParser.getServers();
+      System.err.println("Using XMLParser");
     }
-
     return servers;
-
   }
 
   /**
@@ -524,15 +556,13 @@ public class DSClient {
       while (type.equals("JCPL") || type.equals("RESF") || type.equals("RESR")) {
         if (type.equals("JCPL")) {
           jobsCompleted = true;
-          //String serverType = resp.split(" ")[3];
-          //terminateIdleServers(getServerType(serverType));
         }
         this.write("REDY");
         resp = this.read();
         type = resp.split(" ")[0];
       }
 
-      if (jobsCompleted) {
+      if (terminateAllIdleServers && jobsCompleted) {
         terminateIdleServers(getServers());
       }
 
@@ -649,22 +679,14 @@ public class DSClient {
 
     // Print session arguments
     if (args.length == 0) {
-
       System.err.println("No args");
-
     } else {
-
       for (int i = 0; i < args.length; i++) {
-
         System.err.println("arg " + Integer.toString(i) + ": " + args[i]);
-
       }
-
     }
 
     // End header
     System.err.println("------");
-
   }
-
 }
