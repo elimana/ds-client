@@ -16,8 +16,6 @@ import java.time.*;
  * defaults to parsing ds-system.xml for server list if omitted. Client will
  * always use GETS All method if ds-system.xml not found.
  * 
- * "-c | --cost"
- * 
  * "-e | --est"
  * "-t | --termidle"
  * "-b | --boot"
@@ -27,9 +25,8 @@ public class DSClient {
   private final static int PORT = 50000;
   private final static String IP_ADDRESS = "localhost";
 
-  HashMap<String, Server> serverTypes;
   Socket DSServer;
-  boolean useEstWaitTime = false, useCheapestServer = false, terminateAllIdleServers = false, useXMLParser = true,
+  boolean useEstWaitTime = false, terminateAllIdleServers = false, useXMLParser = true,
       bootingAsAvailable = false, fitnessByCore = false;;
 
   public DSClient () {
@@ -53,22 +50,10 @@ public class DSClient {
       // Get the first job for scheduling.
       Job j = dsclient.getNextJob();
 
-      List<Server> servers = dsclient.decideGetServers();
-
-      dsclient.serverTypes = new HashMap<String, Server>();
-
-      for (Server server : servers) {
-        dsclient.serverTypes.putIfAbsent(server.getType(), server);
-      }
-
       while (j != null) {
         // Get the best fit server for the job
         Server bestFitServer;
-        if (dsclient.useCheapestServer) {
-          bestFitServer = dsclient.cheapestServer(j);
-        } else {
-          bestFitServer = dsclient.bestFitServer(j);
-        }
+        bestFitServer = dsclient.bestFitServer(j);
 
         // Schedule to the best fit server
         dsclient.dispatch(j, bestFitServer);
@@ -90,8 +75,6 @@ public class DSClient {
     while (i < args.length) {
       if (args[i].equals("-g") || args[i].equals("--getsall")) {
         useXMLParser = false;
-      } else if (args[i].equals("-c") || args[i].equals("--cost")) {
-        useCheapestServer = true;
       } else if (args[i].equals("-t") || args[i].equals("-termidle")) {
         terminateAllIdleServers = true;
       } else if (args[i].equals("-e") || args[i].equals("--est")) {
@@ -142,35 +125,6 @@ public class DSClient {
 
     // Return the largest Server object from the list.
     return servers.get(0);
-  }
-
-  public Server cheapestServer(Job j) {
-    // If no Servers are provided, return null.
-    List<Server> capableServers = getCapableServers(j.getCore(), j.getMemory(), j.getDisk());
-
-    if (capableServers == null || capableServers.isEmpty()) {
-      return null;
-    }
-
-    Server cheapestServer = null;
-    Float minRelativeCost = Float.MAX_VALUE;
-    int minWJobs = Integer.MAX_VALUE;
-    for (Server server : capableServers) {
-      Server serverType = serverTypes.get(server.getType());
-      Float relativeCost = (float) serverType.getHourlyRate() / serverType.getCore();
-      if (relativeCost < minRelativeCost) {
-        minRelativeCost = relativeCost;
-        cheapestServer = server;
-        minWJobs = server.getWJobs();
-      } else if (relativeCost.equals(minRelativeCost) && server.getWJobs() < minWJobs) {
-        minRelativeCost = relativeCost;
-        cheapestServer = server;
-        minWJobs = server.getWJobs();
-      }
-    }
-
-    // Return the largest Server object from the list.
-    return cheapestServer;
   }
 
   public Server bestFitServer(Job j) {
@@ -477,37 +431,6 @@ public class DSClient {
     try {
       // Send 'GETS All' to the ds-server and retrieve the list of servers.
       this.write("GETS Capable " + core + " " + mem + " " + disk);
-
-      String resp = this.read();
-      String data[] = resp.split(" ");
-      int lines = Integer.parseInt(data[1]);
-
-      this.write("OK");
-
-      // Create a new Server object for each retrieved server and add it to the List.
-      for (int i = 0; i < lines; i++) {
-        Server s = new Server(this.read());
-        servers.add(s);
-      }
-
-      // Complete the communication with ds-server.
-      this.write("OK");
-      this.read();
-    } catch (IOException e) {
-      e.printStackTrace();
-    }
-
-    return servers;
-  }
-
-  public List<Server> getServerType(String serverType) {
-
-    // Create a list of Server objects
-    List<Server> servers = new ArrayList<Server>();
-
-    try {
-      // Send 'GETS All' to the ds-server and retrieve the list of servers.
-      this.write("GETS Type " + serverType);
 
       String resp = this.read();
       String data[] = resp.split(" ");
