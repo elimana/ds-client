@@ -43,11 +43,11 @@ public class DSClient {
     DSClient dsclient = new DSClient();
 
     try {
-      // Configure the client and scheduling algorithm
-      dsclient.configureClient(args);
-
       // Setup simple log file in client local directory
       dsclient.startLog(args);
+
+      // Configure the client and scheduling algorithm
+      dsclient.configureClient(args);
 
       // Connect to the ds-server instance running on the default port 50000 and
       // complete the handshake.
