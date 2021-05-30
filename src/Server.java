@@ -42,6 +42,20 @@ public class Server implements Comparable<Server>{
     this.hourlyRate = hourlyRate;
   }
 
+  public Server (String type, int ID) {
+    this.type = type;
+    this.ID = ID;
+    this.state = "unknown";
+    this.curStartTime = -1;
+    this.core = -1;
+    this.mem = -1;
+    this.disk = -1;
+    this.bootTime = -1;
+    this.wJobs = 0;
+    this.rJobs = 0;
+    this.hourlyRate = -1;
+  }
+
   /**
    * Getter function for server type
    * 

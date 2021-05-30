@@ -26,7 +26,7 @@ public class DSClient {
   private final static String IP_ADDRESS = "localhost";
 
   Socket DSServer;
-  boolean useEstWaitTime = false, terminateAllIdleServers = false, useXMLParser = true,
+  boolean useEstWaitTime = false, terminateIdleServers = false, useXMLParser = true,
       bootingAsAvailable = false, fitnessByCore = false;;
 
   public DSClient () {
@@ -76,7 +76,7 @@ public class DSClient {
       if (args[i].equals("-g") || args[i].equals("--getsall")) {
         useXMLParser = false;
       } else if (args[i].equals("-t") || args[i].equals("-termidle")) {
-        terminateAllIdleServers = true;
+        terminateIdleServers = true;
       } else if (args[i].equals("-e") || args[i].equals("--est")) {
         useEstWaitTime = true;
       } else if (args[i].equals("-b") || args[i].equals("--boot")) {
@@ -475,18 +475,18 @@ public class DSClient {
 
       // If the response is a job/server status message, continue sending 'REDY' until
       // no more status messages are received.
-      boolean jobsCompleted = false;
       while (type.equals("JCPL") || type.equals("RESF") || type.equals("RESR")) {
-        if (type.equals("JCPL")) {
-          jobsCompleted = true;
+        if (terminateIdleServers && type.equals("JCPL")) {
+          String serverType = resp.split(" ")[3];
+          int serverID = Integer.parseInt(resp.split(" ")[4]);
+          Server s = new Server(serverType, serverID);
+          if (getServerJobs(s).isEmpty()) {
+            terminateServer(s);
+          }
         }
         this.write("REDY");
         resp = this.read();
         type = resp.split(" ")[0];
-      }
-
-      if (terminateAllIdleServers && jobsCompleted) {
-        terminateIdleServers(getServers());
       }
 
       // If a job is received create a new Job object for it.
