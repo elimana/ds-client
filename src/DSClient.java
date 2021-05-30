@@ -12,14 +12,20 @@ import java.time.*;
  * 
  * Arguments:
  * 
- * "-g | --getsall" -> Force client to use GETS All method to retrieve server list. Client
- * defaults to parsing ds-system.xml for server list if omitted. Client will
- * always use GETS All method if ds-system.xml not found.
+ * "-g | --getsall" -> Force client to use GETS All method to retrieve server
+ * list. Client defaults to parsing ds-system.xml for server list if omitted.
+ * Client will always use GETS All method if ds-system.xml not found.
  * 
- * "-e | --est"
- * "-t | --termidle"
- * "-b | --boot"
- * "-f | --fitcore"
+ * "-e | --est" -> Uses estimated server waiting time instead of the more
+ * precise next available server time to speed up the program.
+ * 
+ * "-t | --termidle" -> Terminate servers when they are idle.
+ * 
+ * "-b | --boot" -> Consider booting servers as available servers with no
+ * waiting jobs.
+ * 
+ * "-f | --fitcore" -> Calculate server fitness in Best Fit by only the number
+ * of available cores.
  */
 public class DSClient {
   private final static int PORT = 50000;
@@ -70,9 +76,16 @@ public class DSClient {
     }
   }
 
+  /**
+   * Parses the argument list and sets the specified program configuration
+   * parameters.
+   * 
+   * @param args the program runtime arguments
+   */
   public void configureClient(String[] args) {
-    int i = 0;
-    while (i < args.length) {
+    // Check through each argument and set the corresponding program configuration
+    // variable.
+    for (int i = 0; i < args.length; i++) {
       if (args[i].equals("-g") || args[i].equals("--getsall")) {
         useXMLParser = false;
       } else if (args[i].equals("-t") || args[i].equals("-termidle")) {
@@ -91,7 +104,6 @@ public class DSClient {
         System.err.println("Usage: DSClient [-g | --getsall] [-c | --cost] [-e | --est] [-t | --termidle] [-b | --boot] [-f | --fitcore]");
         System.exit(1);
       }
-      i++;
     }
 
     // Check to see if ds-system.xml exists at expected path if using XMLParser
@@ -106,39 +118,36 @@ public class DSClient {
   }
 
   /**
-   * Sorts the provided list of Server objects and retrieves the largest server
-   * based on the number of cores.
+   * This function gets a list of capable servers using the getCapableServers()
+   * function which sends ‘GETS Capable’ to ds-sim, and then implements best fit
+   * by finding the server with sufficient available resources for the job and
+   * with the lowest aggregated fitness value from the list. The available server
+   * resources are calculated by the calcServerUtilisation() function. If there is
+   * no capable server with sufficient available resources for the job, the next
+   * available server is retrieved with the getNextAvailableServer() function that
+   * returns the capable server with the lowest available server time for the job.
    * 
-   * @param servers the List of Server objects to sort in descending order based
-   *                on the number of cores.
-   * @return the largest Server from the list (the Server with the largest number
-   *         of cores)
+   * @param j the Job that the Server should fit
+   * @return the best fitting Server
    */
-  public Server getLargestServer(List<Server> servers) {
-    // If no Servers are provided, return null.
-    if (servers == null || servers.isEmpty()) {
-      return null;
-    }
-
-    // Sort the list of servers in descending order based on the number of cores.
-    Collections.sort(servers);
-
-    // Return the largest Server object from the list.
-    return servers.get(0);
-  }
-
   public Server bestFitServer(Job j) {
+    // Get a list of servers with the capable for the job.
     List<Server> capableServers = getCapableServers(j.getCore(), j.getMemory(), j.getDisk());
 
     float minFitness = Float.MAX_VALUE;
     Server BFServer = null;
+    // Find the available server with the lowest fitness.
     for (Server s : capableServers) {
+      // Consider a server in the booting state as available if the option is
+      // configured
       if ((bootingAsAvailable && s.getState().equals("booting")) || s.getWJobs() == 0) {
         Resource fitness = calcServerUtilisation(s);
         if (fitness.getPendingJobs() == 0 && fitness.getAvailableMem() >= j.getMemory()
             && fitness.getAvailableDisk() >= j.getDisk() && fitness.getAvailableCores() >= j.getCore()) {
           
           float statistic;
+          // Calculate the fitness ans the available cores if configured as such,
+          // otherwise calculate the combined fitness statistic.
           if (fitnessByCore) {
             statistic = fitness.getAvailableCores();
           } else {
@@ -155,18 +164,31 @@ public class DSClient {
       }
     }
 
+    // If there are no available servers, get the next available server.
     if (BFServer == null) {
-      // get next available server
       BFServer = getNextAvailableServer(capableServers, j.getCore(), j.getMemory(), j.getDisk());
     }
     return BFServer;
   }
 
+  /**
+   * This function finds the next available server times for the servers in the
+   * list and returns the server that is available soonest.
+   * 
+   * @param capableServers the list of Servers to compare from
+   * @param reqCore        the required available cores from the server
+   * @param reqMem         the required available memory from the server
+   * @param reqDisk        the required available disk from the server
+   * @return
+   */
   public Server getNextAvailableServer(List<Server> capableServers, int reqCore, int reqMem, int reqDisk) {
     int minTime = Integer.MAX_VALUE;
     Server nextServer = capableServers.get(0);
+    // Find the server that is available soonest.
     for (Server s : capableServers) {
       int availableTime;
+      // If configured, use estimated server wait time, otherwise use the more precise
+      // getServerAvailableTime function.
       if (useEstWaitTime) {
         availableTime = getServerEstWaitTime(s);
       } else {
@@ -181,10 +203,17 @@ public class DSClient {
     return nextServer;
   }
 
+  /**
+   * Get the estimated server wait time from ds-sim using the 'EJWT' command.
+   * 
+   * @param s the Server to get the estimated wait time for
+   * @return the estimated wait time in seconds
+   */
   public int getServerEstWaitTime(Server s) {
     int estWaitTime = 0;
     try {
-      // Send 'LSTJ' to the ds-server and retrieve the list of jobs scheduled to the server.
+      // Send 'EJWT' to the ds-server and retrieve the estimated waiting time of the
+      // server.
       this.write("EJWT " + s.getType() + " " + s.getID());
 
       String resp = this.read();
@@ -197,12 +226,25 @@ public class DSClient {
     return estWaitTime;
   }
 
+  /**
+   * This function finds the next available server time for a specified server
+   * 
+   * @param s       the Server to get the next available time for
+   * @param reqCore the required available cores from the server
+   * @param reqMem  the required available memory from the server
+   * @param reqDisk the required available disk from the server
+   * @return the next available server time for the Server
+   */
   public int getServerAvailableTime(Server s, int reqCore, int reqMem, int reqDisk) {
+    // Get a list of server jobs.
     List<Job> serverJobs = getServerJobs(s);
 
+    // Divide the server jobs into running jobs and waiting jobs.
     List<Job> runningJobs;
     List<Job> waitingJobs;
 
+    // If the server is booting, consider waiting jobs with a know start time as
+    // running jobs.
     if (s.getState().equals("booting")) {
       runningJobs = serverJobs.stream().filter(j -> j.getStartTime() >= 0).collect(Collectors.toList());
       waitingJobs = serverJobs.stream().filter(j -> j.getStartTime() == -1).collect(Collectors.toList());
@@ -211,26 +253,31 @@ public class DSClient {
       waitingJobs = serverJobs.stream().filter(j -> j.getState() == 1).collect(Collectors.toList());
     }
 
+    // Sort running jobs by job end time.
     runningJobs.sort((j1, j2) -> Integer.valueOf(j1.getEndTime()).compareTo(j2.getEndTime()));
+    // Sort waiting jobs by id (order of submission).
     waitingJobs.sort((j1, j2) -> Integer.valueOf(j1.getID()).compareTo(j2.getID()));
 
+    // Get the current available resources of the server.
     Resource utilisedResources = calcServerUtilisation(s);
-
     int availableCores = utilisedResources.getAvailableCores();
     int availableMem = utilisedResources.getAvailableMem();
     int availableDisk = utilisedResources.getAvailableDisk();
     int time = 0;
 
+    // Iterate through the server jobs until there is enough available resources to
+    // satisfy the requirement.
     while (!waitingJobs.isEmpty() || (availableCores < reqCore || availableMem < reqMem || availableDisk < reqDisk)) {
       // Remove the first job to finish from the list of running jobs and update
-      // available resources
+      // available resources.
       Job finishedJob = runningJobs.remove(0);
+      // Update the time to the removed job's end time.
       time = finishedJob.getEndTime();
       availableCores += finishedJob.getCore();
       availableMem += finishedJob.getMemory();
       availableDisk += finishedJob.getDisk();
 
-      // Add waiting jobs
+      // Add any waiting jobs that can be added to the running jobs list.
       boolean addRunJob = false;
       while (!waitingJobs.isEmpty() && waitingJobs.get(0).getCore() <= availableCores
           && waitingJobs.get(0).getMemory() <= availableMem && waitingJobs.get(0).getDisk() <= availableDisk) {
@@ -242,19 +289,30 @@ public class DSClient {
         runningJobs.add(nextJob);
         addRunJob = true;
 
+        // Remove the resources requirements of the added waiting jobs from the
+        // available server resources.
         availableCores -= nextJob.getCore();
         availableMem -= nextJob.getMemory();
         availableDisk -= nextJob.getDisk();
       }
 
+      // If a waiting job was added to the running jobs list, resort the list by job
+      // end time.
       if (addRunJob) {
         runningJobs.sort((j1, j2) -> Integer.valueOf(j1.getEndTime()).compareTo(j2.getEndTime()));
       }
     }
 
+    // Return the next available server time.
     return time;
   }
 
+  /**
+   * Get the jobs assigned to a server from ds-sim using the 'LSTJ' command.
+   * 
+   * @param s the Server to get the assigned jobs for
+   * @return a List of Jobs assigned to the Server
+   */
   public List<Job> getServerJobs(Server s) {
     List<Job> serverJobs = new ArrayList<Job>();
 
@@ -282,6 +340,11 @@ public class DSClient {
     return serverJobs;
   }
 
+  /**
+   * Terminates the specified Server using the 'TERM' command.
+   * 
+   * @param s the Server to terminate
+   */
   public void terminateServer(Server s) {
     try {
       // Send 'TERM' to the ds-server and terminate the server.
@@ -293,20 +356,21 @@ public class DSClient {
     }
   }
 
-  public void terminateIdleServers(List<Server> servers) {
-    for (Server s : servers) {
-      if (s.getState().equals("idle")) {
-        terminateServer(s);
-      }
-    }
-  }
-
+  /**
+   * Calculates the current amount of resources available to the server, and the
+   * number of pending jobs on the server.
+   * 
+   * @param s the Server to calculate the resources for
+   * @return available Server Resources
+   */
   public Resource calcServerUtilisation(Server s) {
     int availableCores = s.getCore();
     int availableMem = s.getMem();
     int availableDisk = s.getDisk();
     int pendingJobs = s.getWJobs();
 
+    // If a Server is in a booting state, recalculate the waiting jobs to determine
+    // the precise number of pending jobs.
     if (s.getState().equals("booting") && pendingJobs > 0) {
       List<Job> serverJobs = getServerJobs(s);
       for (Job job : serverJobs) {
@@ -476,6 +540,9 @@ public class DSClient {
       // If the response is a job/server status message, continue sending 'REDY' until
       // no more status messages are received.
       while (type.equals("JCPL") || type.equals("RESF") || type.equals("RESR")) {
+        // If the program is configured to terminate idle servers and a job has
+        // completed, verify if the server on which the job completed is not now idle,
+        // and terminate it if it is.
         if (terminateIdleServers && type.equals("JCPL")) {
           String serverType = resp.split(" ")[3];
           int serverID = Integer.parseInt(resp.split(" ")[4]);

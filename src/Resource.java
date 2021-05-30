@@ -1,3 +1,6 @@
+/**
+ * This class represents the available server resources.
+ */
 public class Resource {
   private int availableCores, availableMem, availableDisk, pendingJobs;
 
