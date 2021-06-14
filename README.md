@@ -24,11 +24,11 @@ To run the program, use the command `java DSClient`, optionally with the argumen
 
 The *Minimum Turnaround Time Algorithm (MTTA)* is primarily based on the Best Fit algorithm, where jobs are first scheduled to the server with sufficient available resources for the job and with the lowest aggregated fitness value. The aggregated fitness statistic is calculated as follows:
 
-<img src="http://www.sciweavers.org/tex2img.php?eq=fitness%3D%5Cfrac%7Bcore_s%7D%7Bcore_j%7D%2B%5Cfrac%7Bmemory_s%7D%7Bmemory_j%7D%2B%5Cfrac%7Bdisk_s%7D%7Bdisk_j%7D&bc=White&fc=Black&im=jpg&fs=12&ff=arev&edit=0" align="center" border="0" alt="fitness=\frac{core_s}{core_j}+\frac{memory_s}{memory_j}+\frac{disk_s}{disk_j}"/>
+<img src="docs/img/MTTA_formula.png"/>
 
 s	- an available server.
 
-j - the job to be scheduled.
+j - the job to be scheduled. 
 
 When there is no capable server with sufficient available resources for the job, the next available server, i.e., the first/quickest server calculated to have sufficient available resources for the job, is selected. To calculate this, the list of running jobs for each capable server is iterated through in ascending order of estimated job end time. This is calculated by summing the job start time and estimated run time. As each running job is iterated through, the job resources are added back to the available server resources and any waiting jobs capable of running are added to the list of running jobs, with their start time set to the estimated end time of the previously removed job. When there are no more waiting jobs, and there are sufficient available resources for the submitted job, the last removed job’s estimated end time is considered as the next available server time for the job. The capable server with the lowest available server time is then selected for the job scheduling.
 
